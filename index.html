@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Private Docs Viewer</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // classによるダークモード制御を有効化
+            theme: {
+                extend: {
+                    colors: {
+                        dracula: {
+                            bg: '#282a36',
+                            sidebar: '#21222c',
+                            current: '#44475a',
+                            fg: '#f8f8f2',
+                            comment: '#6272a4',
+                            cyan: '#8be9fd',
+                            green: '#50fa7b',
+                            orange: '#ffb86c',
+                            pink: '#ff79c6',
+                            purple: '#bd93f9',
+                            red: '#ff5555',
+                            yellow: '#f1fa8c'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1.0.0/texmath.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <link id="hl-style" rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dracula.min.css">
+    <link id="md-style" rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        * {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        details>summary {
+            list-style: none;
+        }
+
+        details>summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details[open]>summary .folder-icon::before {
+            content: '📂';
+        }
+
+        details:not([open])>summary .folder-icon::before {
+            content: '📁';
+        }
+
+        #pdf-pages-wrapper {
+            transition: width 0.2s ease-out;
+        }
+
+        /* Markdown 背景の透過化 (Light/Dark共通) */
+        .markdown-body {
+            background-color: transparent !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        /* KaTeX ベーススタイル */
+        .katex {
+            font-size: 1.15em;
+        }
+
+        .katex-display {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.5em;
+        }
+
+        .dark .katex {
+            color: #f8f8f2;
+        }
+
+        :not(.dark) .katex {
+            color: #1f2937;
+        }
+
+        /* Dracula専用 Markdown カスタム (ダークモード時のみ適用) */
+        .dark .markdown-body {
+            color: #f8f8f2;
+        }
+
+        .dark .markdown-body h1,
+        .dark .markdown-body h2,
+        .dark .markdown-body h3,
+        .dark .markdown-body h4,
+        .dark .markdown-body h5,
+        .dark .markdown-body h6 {
+            color: #bd93f9;
+            border-bottom-color: #44475a;
+        }
+
+        .dark .markdown-body a {
+            color: #8be9fd;
+        }
+
+        .dark .markdown-body blockquote {
+            color: #f1fa8c;
+            border-left-color: #bd93f9;
+        }
+
+        .dark .markdown-body code {
+            background-color: #44475a;
+            color: #ff79c6;
+        }
+
+        .dark .markdown-body pre {
+            background-color: #21222c !important;
+            border: 1px solid #44475a;
+        }
+
+        .dark .markdown-body table tr {
+            background-color: #282a36;
+            border-top-color: #44475a;
+        }
+
+        .dark .markdown-body table tr:nth-child(2n) {
+            background-color: #21222c;
+        }
+
+        .dark .markdown-body table th,
+        .dark .markdown-body table td {
+            border-color: #44475a;
+        }
+
+        .dark .markdown-body hr {
+            background-color: #44475a;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-gray-50 dark:bg-dracula-bg text-gray-900 dark:text-dracula-fg font-sans h-[100dvh] flex flex-col overflow-hidden selection:bg-blue-200 dark:selection:bg-dracula-current selection:text-blue-900 dark:selection:text-dracula-cyan transition-colors">
+
+    <div id="loading"
+        class="hidden absolute inset-0 bg-white dark:bg-dracula-bg bg-opacity-80 dark:bg-opacity-80 z-[100] flex justify-center items-center">
+        <div
+            class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 dark:border-dracula-purple">
+        </div>
+    </div>
+
+    <div id="login-view"
+        class="flex flex-col h-full justify-center max-w-md mx-auto w-full overflow-y-auto p-4 z-50 bg-gray-50 dark:bg-dracula-bg absolute inset-0 transition-colors">
+        <div
+            class="bg-white dark:bg-dracula-sidebar p-6 rounded-lg shadow-xl dark:shadow-2xl border border-gray-200 dark:border-dracula-current">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-dracula-purple">リポジトリ設定</h2>
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-sm text-gray-600 dark:text-dracula-comment mb-1">対象リポジトリ <span
+                            class="text-red-500 dark:text-dracula-red">*</span></label>
+                    <input type="text" id="repo-input" placeholder="例: user/repo"
+                        class="w-full p-3 rounded bg-gray-50 dark:bg-dracula-bg border border-gray-300 dark:border-dracula-current text-gray-900 dark:text-dracula-fg focus:outline-none focus:border-blue-500 dark:focus:border-dracula-pink font-mono text-sm transition-colors">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 dark:text-dracula-comment mb-1">ルートパス (省略可)</label>
+                    <input type="text" id="path-input" placeholder="例: docs"
+                        class="w-full p-3 rounded bg-gray-50 dark:bg-dracula-bg border border-gray-300 dark:border-dracula-current text-gray-900 dark:text-dracula-fg focus:outline-none focus:border-blue-500 dark:focus:border-dracula-pink font-mono text-sm transition-colors">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 dark:text-dracula-comment mb-1">Personal Access Token
+                        <span class="text-red-500 dark:text-dracula-red">*</span></label>
+                    <input type="password" id="token-input" placeholder="github_pat_..."
+                        class="w-full p-3 rounded bg-gray-50 dark:bg-dracula-bg border border-gray-300 dark:border-dracula-current text-gray-900 dark:text-dracula-fg focus:outline-none focus:border-blue-500 dark:focus:border-dracula-pink font-mono text-sm transition-colors">
+                </div>
+            </div>
+            <button id="login-btn"
+                class="w-full bg-blue-600 hover:bg-blue-700 dark:bg-dracula-purple dark:hover:bg-[#a67cf3] text-white dark:text-dracula-bg font-bold py-3 px-4 rounded transition duration-200 shadow">
+                ビューアーを起動
+            </button>
+            <p id="login-error" class="text-red-500 dark:text-dracula-red text-sm mt-3 hidden text-center"></p>
+        </div>
+    </div>
+
+    <div id="workspace-view" class="hidden flex-col h-full w-full relative">
+
+        <header
+            class="bg-white dark:bg-dracula-sidebar p-3 shadow-sm dark:shadow-md flex justify-between items-center shrink-0 border-b border-gray-200 dark:border-dracula-current z-20 transition-colors">
+            <div class="flex items-center">
+                <button id="menu-btn"
+                    class="text-gray-500 hover:text-gray-900 dark:text-dracula-comment dark:hover:text-dracula-fg mr-3 text-2xl focus:outline-none px-2 transition-colors">☰</button>
+                <h1 class="text-lg font-bold truncate max-w-[150px] sm:max-w-[200px] text-gray-800 dark:text-dracula-purple"
+                    id="header-title">Docs Viewer</h1>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <button id="theme-toggle-btn"
+                    class="text-lg p-1 hover:bg-gray-100 dark:hover:bg-dracula-current rounded transition-colors"
+                    title="テーマ切り替え">
+                    🌙
+                </button>
+
+                <div id="zoom-controls"
+                    class="hidden flex items-center space-x-1 bg-gray-100 dark:bg-dracula-bg rounded border border-gray-200 dark:border-dracula-current p-1 transition-colors">
+                    <button id="zoom-out-btn"
+                        class="text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg px-2 rounded transition-colors">-</button>
+                    <span id="zoom-level"
+                        class="text-xs text-gray-700 dark:text-dracula-fg w-10 text-center cursor-pointer font-mono">100%</span>
+                    <button id="zoom-in-btn"
+                        class="text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg px-2 rounded transition-colors">+</button>
+                </div>
+
+                <button id="logout-btn"
+                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 dark:bg-dracula-bg dark:hover:bg-dracula-current dark:text-dracula-comment dark:hover:text-dracula-fg py-1.5 px-3 rounded border border-gray-200 dark:border-dracula-current transition-colors">設定</button>
+            </div>
+        </header>
+
+        <div
+            class="flex-grow relative flex overflow-hidden bg-gray-50 dark:bg-dracula-bg w-full h-full transition-colors">
+
+            <div id="sidebar-overlay"
+                class="absolute inset-0 bg-black bg-opacity-40 dark:bg-opacity-60 z-30 hidden transition-opacity"></div>
+
+            <aside id="sidebar"
+                class="absolute inset-y-0 left-0 w-72 bg-white dark:bg-dracula-sidebar border-r border-gray-200 dark:border-dracula-current transform -translate-x-full transition-transform duration-300 z-40 flex flex-col shadow-xl dark:shadow-2xl h-full">
+                <div
+                    class="p-3 border-b border-gray-200 dark:border-dracula-current bg-gray-50 dark:bg-dracula-sidebar shrink-0 flex justify-between items-center transition-colors">
+                    <span class="font-semibold text-sm text-gray-700 dark:text-dracula-fg">エクスプローラー</span>
+                    <button id="close-sidebar-btn"
+                        class="text-gray-400 hover:text-gray-600 dark:text-dracula-comment dark:hover:text-dracula-red text-2xl px-2 leading-none transition-colors">×</button>
+                </div>
+                <div class="flex-grow overflow-y-auto p-2 text-sm pb-10" id="tree-root"></div>
+            </aside>
+
+            <div id="scroll-container" class="flex-grow overflow-auto w-full h-full relative"
+                style="-webkit-overflow-scrolling: touch;">
+
+                <div id="empty-state"
+                    class="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-dracula-comment flex-col h-full pointer-events-none">
+                    <p class="text-sm">左上のメニュー(☰)からファイルを選択してください</p>
+                </div>
+
+                <div id="pdf-wrapper" class="hidden flex-col items-center py-4 space-y-3 mx-auto"
+                    style="width: 100%; max-width: 800px;"></div>
+
+                <div id="md-wrapper" class="hidden markdown-body p-6 mx-auto w-full max-w-4xl pb-20"></div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const md = window.markdownit({
+            html: true,
+            breaks: true,
+            linkify: true,
+            highlight: function (str, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try { return hljs.highlight(str, { language: lang }).value; } catch (__) { }
+                }
+                return '';
+            }
+        }).use(window.texmath, { engine: window.katex, delimiters: 'dollars' });
+
+        let settings = {
+            repo: localStorage.getItem('github_target_repo') || '',
+            path: localStorage.getItem('github_target_path') || '',
+            token: localStorage.getItem('github_pat') || ''
+        };
+        let pdfDoc = null;
+        let pageObserver = null;
+        let currentZoom = 100;
+        const BASE_MAX_WIDTH = 800;
+
+        // DOM要素
+        const treeRoot = document.getElementById('tree-root');
+        const scrollContainer = document.getElementById('scroll-container');
+        const emptyState = document.getElementById('empty-state');
+        const pdfWrapper = document.getElementById('pdf-wrapper');
+        const mdWrapper = document.getElementById('md-wrapper');
+        const zoomControls = document.getElementById('zoom-controls');
+        const zoomLevelText = document.getElementById('zoom-level');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const mdStyle = document.getElementById('md-style');
+        const hlStyle = document.getElementById('hl-style');
+
+        // テーマ切り替え機能
+        function applyTheme(isDark) {
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                themeToggleBtn.textContent = '🌞';
+                mdStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-dark.min.css';
+                hlStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dracula.min.css';
+                localStorage.setItem('theme_preference', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggleBtn.textContent = '🌙';
+                mdStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-light.min.css';
+                hlStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+                localStorage.setItem('theme_preference', 'light');
+            }
+        }
+
+        // 初期テーマ適用
+        const savedTheme = localStorage.getItem('theme_preference') || 'dark';
+        applyTheme(savedTheme === 'dark');
+
+        themeToggleBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            applyTheme(!isDark);
+        });
+
+        const showLoading = () => document.getElementById('loading').classList.remove('hidden');
+        const hideLoading = () => document.getElementById('loading').classList.add('hidden');
+
+        const toggleSidebar = (forceState) => {
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+            const willOpen = forceState !== undefined ? forceState : !isOpen;
+            if (willOpen) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            }
+        };
+
+        const handleFileClick = () => { if (window.innerWidth < 768) toggleSidebar(false); };
+
+        document.getElementById('menu-btn').addEventListener('click', () => toggleSidebar(true));
+        document.getElementById('close-sidebar-btn').addEventListener('click', () => toggleSidebar(false));
+        sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+
+        async function init() {
+            document.getElementById('repo-input').value = settings.repo;
+            document.getElementById('path-input').value = settings.path;
+            document.getElementById('token-input').value = settings.token;
+
+            if (settings.repo && settings.token) {
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('workspace-view').classList.remove('hidden');
+                document.getElementById('workspace-view').classList.add('flex');
+                document.getElementById('header-title').textContent = settings.repo.split('/')[1] || 'Docs Viewer';
+                await loadTreeLevel(settings.path, treeRoot);
+            }
+        }
+
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const repo = document.getElementById('repo-input').value.trim();
+            const path = document.getElementById('path-input').value.trim();
+            const token = document.getElementById('token-input').value.trim();
+
+            if (!repo || !token) return alert('必須項目を入力してください。');
+
+            settings = { repo, path, token };
+            localStorage.setItem('github_target_repo', repo);
+            localStorage.setItem('github_target_path', path);
+            localStorage.setItem('github_pat', token);
+
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('workspace-view').classList.remove('hidden');
+            document.getElementById('workspace-view').classList.add('flex');
+
+            treeRoot.innerHTML = '';
+            await loadTreeLevel(settings.path, treeRoot);
+            toggleSidebar(true);
+        });
+
+        async function loadTreeLevel(path, container) {
+            const cleanPath = path.replace(/^\/+|\/+$/g, '');
+            const apiUrl = `https://api.github.com/repos/${settings.repo}/contents/${cleanPath}`;
+
+            try {
+                if (container === treeRoot) showLoading();
+                const response = await fetch(apiUrl, {
+                    headers: { 'Authorization': `Bearer ${settings.token}`, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                if (!response.ok) throw new Error(response.status);
+
+                const data = await response.json();
+                const items = Array.isArray(data) ? data : [data];
+
+                const folders = items.filter(i => i.type === 'dir').sort((a, b) => a.name.localeCompare(b.name));
+                const files = items.filter(i => i.type === 'file' && (i.name.toLowerCase().endsWith('.pdf') || i.name.toLowerCase().endsWith('.md'))).sort((a, b) => a.name.localeCompare(b.name));
+
+                renderTreeItems(folders, files, container);
+            } catch (error) {
+                container.innerHTML = `<div class="text-red-500 dark:text-dracula-red p-2 text-xs">エラー (${error.message})</div>`;
+            } finally {
+                if (container === treeRoot) hideLoading();
+            }
+        }
+
+        function renderTreeItems(folders, files, container) {
+            container.innerHTML = '';
+            const ul = document.createElement('ul');
+            ul.className = container === treeRoot ? 'space-y-1' : 'space-y-1 ml-2 border-l border-gray-200 dark:border-dracula-current pl-2 mt-1';
+
+            if (folders.length === 0 && files.length === 0) {
+                ul.innerHTML = '<li class="text-gray-400 dark:text-dracula-comment text-xs py-1">ファイルなし</li>';
+                container.appendChild(ul);
+                return;
+            }
+
+            folders.forEach(folder => {
+                const li = document.createElement('li');
+                const details = document.createElement('details');
+                details.className = 'group';
+                const summary = document.createElement('summary');
+                summary.className = 'cursor-pointer py-1.5 px-2 hover:bg-gray-100 dark:hover:bg-dracula-current rounded text-gray-700 dark:text-dracula-fg flex items-center select-none transition-colors';
+                summary.innerHTML = `<span class="folder-icon mr-2 text-lg"></span><span class="truncate">${folder.name}</span>`;
+
+                const childrenContainer = document.createElement('div');
+                details.addEventListener('toggle', () => {
+                    if (details.open && !details.dataset.loaded) {
+                        details.dataset.loaded = 'true';
+                        childrenContainer.innerHTML = '<div class="pl-4 py-1 text-gray-400 dark:text-dracula-comment text-xs animate-pulse">読込中...</div>';
+                        loadTreeLevel(folder.path, childrenContainer);
+                    }
+                });
+                details.appendChild(summary);
+                details.appendChild(childrenContainer);
+                li.appendChild(details);
+                ul.appendChild(li);
+            });
+
+            files.forEach(file => {
+                const isPdf = file.name.toLowerCase().endsWith('.pdf');
+                const li = document.createElement('li');
+                li.className = 'cursor-pointer py-1.5 px-2 hover:bg-gray-100 dark:hover:bg-dracula-current rounded text-blue-600 dark:text-dracula-cyan flex items-center transition-colors';
+                li.innerHTML = `<span class="mr-2 text-lg">${isPdf ? '📄' : '📝'}</span><span class="truncate">${file.name}</span>`;
+                li.addEventListener('click', () => {
+                    handleFileClick();
+                    if (isPdf) loadPdfContinuous(file.sha, file.name);
+                    else loadMarkdown(file.sha, file.name);
+                });
+                ul.appendChild(li);
+            });
+            container.appendChild(ul);
+        }
+
+        function decodeBase64UTF8(base64) {
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+            return new TextDecoder('utf-8').decode(bytes);
+        }
+
+        async function loadMarkdown(fileSha, fileName) {
+            showLoading();
+            resetViewerState(fileName, 'md');
+
+            try {
+                const apiUrl = `https://api.github.com/repos/${settings.repo}/git/blobs/${fileSha}`;
+                const response = await fetch(apiUrl, {
+                    headers: { 'Authorization': `Bearer ${settings.token}`, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+
+                const markdownText = decodeBase64UTF8(data.content);
+                const rawHtml = md.render(markdownText);
+
+                const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                    ADD_TAGS: ['math', 'maction', 'maligngroup', 'malignmark', 'menclose', 'merror', 'mfenced', 'mfrac', 'mi', 'mlongdiv', 'mmultiscripts', 'mn', 'mo', 'mover', 'mpadded', 'mphantom', 'mroot', 'mrow', 'ms', 'mscarries', 'mscarry', 'msgroup', 'msline', 'mspace', 'msqrt', 'msrow', 'mstyle', 'msub', 'msup', 'msubsup', 'mtable', 'mtd', 'mtext', 'mtr', 'munder', 'munderover', 'semantics', 'annotation', 'annotation-xml'],
+                    ADD_ATTRS: ['target', 'class', 'style', 'xmlns', 'display']
+                });
+
+                mdWrapper.innerHTML = cleanHtml;
+                mdWrapper.classList.remove('hidden');
+
+            } catch (error) {
+                alert('Markdownの読み込みに失敗しました。');
+                emptyState.classList.remove('hidden');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function updateZoomUI() {
+            zoomLevelText.textContent = `${currentZoom}%`;
+            const targetWidth = (BASE_MAX_WIDTH * (currentZoom / 100));
+            pdfWrapper.style.maxWidth = `${targetWidth}px`;
+            pdfWrapper.style.width = `${currentZoom}%`;
+        }
+
+        document.getElementById('zoom-in-btn').addEventListener('click', () => {
+            if (currentZoom < 300) { currentZoom += 25; updateZoomUI(); }
+        });
+        document.getElementById('zoom-out-btn').addEventListener('click', () => {
+            if (currentZoom > 50) { currentZoom -= 25; updateZoomUI(); }
+        });
+        zoomLevelText.addEventListener('click', () => { currentZoom = 100; updateZoomUI(); });
+
+        async function loadPdfContinuous(fileSha, fileName) {
+            showLoading();
+            resetViewerState(fileName, 'pdf');
+
+            try {
+                const apiUrl = `https://api.github.com/repos/${settings.repo}/git/blobs/${fileSha}`;
+                const response = await fetch(apiUrl, {
+                    headers: { 'Authorization': `Bearer ${settings.token}`, 'Accept': 'application/vnd.github.v3+json' }
+                });
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+
+                const binaryString = atob(data.content);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+
+                const loadingTask = pdfjsLib.getDocument({ data: bytes });
+                pdfDoc = await loadingTask.promise;
+
+                pdfWrapper.classList.remove('hidden');
+                await setupContinuousScroll();
+            } catch (error) {
+                alert('PDFの読み込みに失敗しました。');
+                emptyState.classList.remove('hidden');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function setupContinuousScroll() {
+            const numPages = pdfDoc.numPages;
+            const firstPage = await pdfDoc.getPage(1);
+            const vp = firstPage.getViewport({ scale: 1 });
+            const aspectRatioCSS = `${vp.width} / ${vp.height}`;
+
+            pageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !entry.target.dataset.rendered) {
+                        entry.target.dataset.rendered = 'true';
+                        renderSinglePage(Number(entry.target.dataset.page), entry.target);
+                    }
+                });
+            }, { root: scrollContainer, rootMargin: '150% 0px' });
+
+            for (let i = 1; i <= numPages; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'w-full bg-white shadow-sm dark:shadow-md relative flex justify-center items-center overflow-hidden rounded border border-gray-200 dark:border-dracula-current transition-colors';
+                wrapper.style.aspectRatio = aspectRatioCSS;
+                wrapper.dataset.page = i;
+
+                const watermark = document.createElement('span');
+                watermark.className = 'text-gray-300 dark:text-gray-600 font-bold text-4xl absolute z-0';
+                watermark.textContent = i;
+
+                wrapper.appendChild(watermark);
+                pdfWrapper.appendChild(wrapper);
+                pageObserver.observe(wrapper);
+            }
+        }
+
+        async function renderSinglePage(pageNum, wrapperNode) {
+            try {
+                const page = await pdfDoc.getPage(pageNum);
+                const pixelRatio = window.devicePixelRatio || 1;
+                const displayWidth = wrapperNode.clientWidth > 0 ? wrapperNode.clientWidth : BASE_MAX_WIDTH;
+                const originalViewport = page.getViewport({ scale: 1 });
+                const baseScale = displayWidth / originalViewport.width;
+
+                const renderViewport = page.getViewport({ scale: baseScale * pixelRatio });
+
+                const canvas = document.createElement('canvas');
+                canvas.className = 'absolute inset-0 w-full h-full object-contain z-10';
+                canvas.width = renderViewport.width;
+                canvas.height = renderViewport.height;
+
+                const ctx = canvas.getContext('2d');
+                await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+
+                wrapperNode.innerHTML = '';
+                wrapperNode.appendChild(canvas);
+            } catch (error) {
+                console.error(`Page ${pageNum} render error:`, error);
+            }
+        }
+
+        function resetViewerState(fileName, type) {
+            document.getElementById('header-title').textContent = fileName;
+            emptyState.classList.add('hidden');
+            pdfWrapper.classList.add('hidden');
+            mdWrapper.classList.add('hidden');
+
+            if (type === 'pdf') {
+                zoomControls.classList.remove('hidden');
+                currentZoom = 100;
+                updateZoomUI();
+            } else {
+                zoomControls.classList.add('hidden');
+            }
+
+            if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
+            if (pageObserver) { pageObserver.disconnect(); pageObserver = null; }
+            pdfWrapper.innerHTML = '';
+            mdWrapper.innerHTML = '';
+            scrollContainer.scrollTop = 0;
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            document.getElementById('workspace-view').classList.add('hidden');
+            document.getElementById('workspace-view').classList.remove('flex');
+            document.getElementById('login-view').classList.remove('hidden');
+            resetViewerState('Docs Viewer', '');
+            emptyState.classList.remove('hidden');
+            toggleSidebar(false);
+        });
+
+        init();
+    </script>
+</body>
+
+</html>
