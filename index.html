@@ -329,6 +329,27 @@
             color: #f8f8f2;
         }
 
+        .dark .markdown-body .katex,
+        .dark .markdown-body .katex * {
+            color: #f8f8f2 !important;
+        }
+
+        .dark .markdown-body .katex .frac-line,
+        .dark .markdown-body .katex .sqrt > .root,
+        .dark .markdown-body .katex .sqrt > .sqrt-line,
+        .dark .markdown-body .katex .overline .overline-line,
+        .dark .markdown-body .katex .underline .underline-line,
+        .dark .markdown-body .katex .rule {
+            border-color: currentColor !important;
+        }
+
+        .dark .markdown-body .katex-display {
+            background: rgb(68 71 90 / 0.32);
+            border: 1px solid rgb(98 114 164 / 0.34);
+            border-radius: 0.375rem;
+            padding: 0.75rem 0.875rem;
+        }
+
         :not(.dark) .katex {
             color: #1f2937;
         }
