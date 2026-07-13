@@ -8,6 +8,7 @@ import { CurrentFileSearchController } from '../search/currentFileSearch.js';
 import { setupKeyboardShortcuts } from '../shortcuts/keyboardShortcuts.js';
 import { LastOpenedFileStore } from '../storage/lastOpenedFile.js';
 import { ThemeController } from '../theme/themeController.js';
+import { PdfZoomController } from '../zoom/pdfZoomController.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -74,8 +75,15 @@ const currentFileSearch = new CurrentFileSearchController({
     getCurrentFile: () => currentFile,
     getPdfDoc: () => pdfDoc
 });
+const pdfZoomController = new PdfZoomController({
+    scrollContainer,
+    pdfWrapper,
+    zoomState,
+    updateZoomUI
+});
 
 themeController.applySavedTheme();
+pdfZoomController.attach();
 
 themeToggleBtn.addEventListener('click', () => themeController.toggle());
 
