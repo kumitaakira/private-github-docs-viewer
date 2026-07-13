@@ -26,6 +26,7 @@ let activeTreeItem = null;
 let searchMode = 'file';
 let searchTimer = null;
 let currentFile = null;
+let isRestoringHistory = false;
 const BASE_MAX_WIDTH = 800;
 const DESKTOP_PDF_BASE_SCALE = 0.75;
 const LAST_FILE_KEY = 'github_docs_last_opened_file';
@@ -100,12 +101,47 @@ function createIcon(name, className = '') {
     return icon;
 }
 
-function openFile(file) {
+function getUrlFilePath() {
+    const hashPrefix = '#/file/';
+    if (window.location.hash.startsWith(hashPrefix)) {
+        return window.location.hash
+            .slice(hashPrefix.length)
+            .split('/')
+            .map(part => decodeURIComponent(part))
+            .join('/');
+    }
+
+    return new URL(window.location.href).searchParams.get('file');
+}
+
+function setUrlFilePath(filePath, { replace = false } = {}) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('file');
+    url.hash = filePath ? `/file/${filePath.split('/').map(part => encodeURIComponent(part)).join('/')}` : '';
+
+    if (url.href === window.location.href) return;
+
+    const state = filePath ? { filePath } : {};
+    if (replace) window.history.replaceState(state, '', url);
+    else window.history.pushState(state, '', url);
+}
+
+async function findFileByPath(filePath) {
+    if (!filePath) return null;
+    const { files } = await repositoryIndex.load();
+    return files.find(file => file.path === filePath) || null;
+}
+
+async function openFile(file, { replaceUrl = false, updateUrl = true } = {}) {
     const type = file.type || fileTypeFromName(file.name);
-    lastOpenedFileStore.save(settings, file, type);
+    const normalizedFile = { ...file, type };
+
+    lastOpenedFileStore.save(settings, normalizedFile, type);
     handleFileClick();
-    if (type === 'pdf') loadPdfContinuous(file.sha, file.name, file.path);
-    else loadMarkdown(file.sha, file.name, file.path);
+    if (type === 'pdf') await loadPdfContinuous(file.sha, file.name, file.path);
+    else await loadMarkdown(file.sha, file.name, file.path);
+
+    if (updateUrl && !isRestoringHistory) setUrlFilePath(file.path, { replace: replaceUrl });
 }
 
 async function loadRepositoryIndex() {
@@ -262,13 +298,23 @@ function setActiveTreeItem(item) {
     activeTreeItem = item;
 }
 
-async function openLastFileIfAvailable() {
+async function openInitialFileIfAvailable() {
+    const urlFilePath = getUrlFilePath();
+    if (urlFilePath) {
+        const urlFile = await findFileByPath(urlFilePath);
+        if (urlFile) {
+            await openFile(urlFile, { replaceUrl: true });
+            return;
+        }
+        setUrlFilePath(null, { replace: true });
+    }
+
     const lastFile = lastOpenedFileStore.get(settings);
     if (!lastFile) return;
 
     try {
-        if (lastFile.type === 'pdf') await loadPdfContinuous(lastFile.sha, lastFile.name, lastFile.path);
-        if (lastFile.type === 'md') await loadMarkdown(lastFile.sha, lastFile.name, lastFile.path);
+        const indexedLastFile = await findFileByPath(lastFile.path);
+        await openFile(indexedLastFile || lastFile, { replaceUrl: true });
     } catch (error) {
         lastOpenedFileStore.clear();
         emptyState.classList.remove('hidden');
@@ -341,9 +387,30 @@ async function init() {
         document.getElementById('workspace-view').classList.add('flex');
         document.getElementById('header-title').textContent = settings.repo.split('/')[1] || 'Docs Viewer';
         await loadTreeLevel(settings.path, treeRoot);
-        await openLastFileIfAvailable();
+        await openInitialFileIfAvailable();
     }
 }
+
+window.addEventListener('popstate', async () => {
+    if (!settings.repo || !settings.token) return;
+
+    const filePath = getUrlFilePath();
+    if (!filePath) {
+        resetViewerState(settings.repo.split('/')[1] || 'Docs Viewer', '');
+        emptyState.classList.remove('hidden');
+        return;
+    }
+
+    isRestoringHistory = true;
+    try {
+        const file = await findFileByPath(filePath);
+        if (file) await openFile(file, { updateUrl: false });
+    } catch (error) {
+        alert(`ファイルを開けませんでした (${error.message})`);
+    } finally {
+        isRestoringHistory = false;
+    }
+});
 
 document.getElementById('login-btn').addEventListener('click', async () => {
     const repo = document.getElementById('repo-input').value.trim();
@@ -366,7 +433,7 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 
     treeRoot.innerHTML = '';
     await loadTreeLevel(settings.path, treeRoot);
-    await openLastFileIfAvailable();
+    await openInitialFileIfAvailable();
     toggleSidebar(true);
 });
 
@@ -462,17 +529,10 @@ function renderTreeItems(folders, files, container) {
         li.appendChild(spacer);
         li.appendChild(fileIcon);
         li.appendChild(fileName);
-        if (lastOpenedFile && lastOpenedFile.path === file.path) setActiveTreeItem(li);
+        if ((currentFile && currentFile.path === file.path) || (lastOpenedFile && lastOpenedFile.path === file.path)) setActiveTreeItem(li);
         li.addEventListener('click', () => {
             setActiveTreeItem(li);
-            handleFileClick();
-            if (isPdf) {
-                lastOpenedFileStore.save(settings, file, 'pdf');
-                loadPdfContinuous(file.sha, file.name, file.path);
-            } else {
-                lastOpenedFileStore.save(settings, file, 'md');
-                loadMarkdown(file.sha, file.name, file.path);
-            }
+            openFile({ ...file, type: isPdf ? 'pdf' : 'md' });
         });
         ul.appendChild(li);
     });
