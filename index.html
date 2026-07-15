@@ -68,6 +68,77 @@
             display: none;
         }
 
+        .waiting-orbit {
+            position: relative;
+            width: 4rem;
+            height: 4rem;
+        }
+
+        .waiting-orbit::before,
+        .waiting-orbit::after {
+            content: '';
+            position: absolute;
+            inset: 0.35rem;
+            border-radius: 9999px;
+            border: 1px solid rgb(37 99 235 / 0.3);
+            animation: waiting-pulse 1.8s ease-in-out infinite;
+        }
+
+        .waiting-orbit::after {
+            inset: 1rem;
+            border-color: rgb(189 147 249 / 0.4);
+            animation-delay: -0.6s;
+        }
+
+        .waiting-dot {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 0.55rem;
+            height: 0.55rem;
+            border-radius: 9999px;
+            background: rgb(37 99 235);
+            transform-origin: -1.35rem -1.35rem;
+            animation: waiting-orbit 1.4s linear infinite;
+        }
+
+        .dark .waiting-dot {
+            background: #bd93f9;
+        }
+
+        .waiting-dot:nth-child(2) {
+            animation-delay: -0.45s;
+            opacity: 0.75;
+        }
+
+        .waiting-dot:nth-child(3) {
+            animation-delay: -0.9s;
+            opacity: 0.55;
+        }
+
+        @keyframes waiting-orbit {
+            from {
+                transform: rotate(0deg) translateX(1.35rem) rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg) translateX(1.35rem) rotate(-360deg);
+            }
+        }
+
+        @keyframes waiting-pulse {
+            0%,
+            100% {
+                transform: scale(0.9);
+                opacity: 0.35;
+            }
+
+            50% {
+                transform: scale(1.08);
+                opacity: 0.9;
+            }
+        }
+
         #pdf-pages-wrapper {
             transition: width 0.2s ease-out;
         }
@@ -445,9 +516,12 @@
     <div id="loading"
         class="hidden absolute inset-0 bg-white dark:bg-dracula-bg bg-opacity-80 dark:bg-opacity-80 z-[100] flex justify-center items-center">
         <div class="flex flex-col items-center gap-3">
-            <div
-                class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 dark:border-dracula-purple">
+            <div class="waiting-orbit" aria-hidden="true">
+                <span class="waiting-dot"></span>
+                <span class="waiting-dot"></span>
+                <span class="waiting-dot"></span>
             </div>
+            <div class="text-xs font-medium tracking-wide text-gray-500 dark:text-dracula-comment">待機中...</div>
             <button id="cancel-loading-btn"
                 class="text-xs text-gray-500 hover:text-gray-800 dark:text-dracula-comment dark:hover:text-dracula-fg transition-colors px-3 py-1 rounded">
                 キャンセル
@@ -456,11 +530,62 @@
     </div>
 
     <div id="login-view"
-        class="flex flex-col h-full justify-center max-w-md mx-auto w-full overflow-y-auto p-4 z-50 bg-gray-50 dark:bg-dracula-bg absolute inset-0 transition-colors">
+        class="flex flex-col h-full justify-center max-w-3xl mx-auto w-full overflow-y-auto p-4 z-50 bg-gray-50 dark:bg-dracula-bg absolute inset-0 transition-colors">
         <div
             class="bg-white dark:bg-dracula-sidebar p-6 rounded-lg shadow-xl dark:shadow-2xl border border-gray-200 dark:border-dracula-current">
-            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-dracula-purple">リポジトリ設定</h2>
-            <div class="space-y-4 mb-6">
+            <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-dracula-cyan">Repository Library</p>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-dracula-purple">接続先ライブラリ</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <p class="text-sm text-gray-500 dark:text-dracula-comment">登録済みのリポジトリを選んで開けます。</p>
+                    <button id="close-repository-library-btn"
+                        class="icon-btn text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg"
+                        title="閉じる">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="repository-list-panel" class="mb-6">
+                <div class="mb-3 flex items-center justify-between border-b border-gray-100 pb-3 dark:border-dracula-current">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-dracula-fg">登録済み</h3>
+                    <button id="new-repository-btn"
+                        class="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 shadow-sm hover:bg-blue-100 dark:border-dracula-cyan/40 dark:bg-dracula-bg dark:text-dracula-cyan dark:hover:bg-dracula-current">
+                        <span class="material-symbols-outlined text-[16px]">add</span>
+                        追加
+                    </button>
+                </div>
+                <div id="repository-list" class="grid gap-2"></div>
+                <p id="repository-empty-state"
+                    class="rounded border border-dashed border-gray-300 dark:border-dracula-current p-4 text-sm text-gray-500 dark:text-dracula-comment">
+                    まだ接続先がありません。「追加」から最初のリポジトリを登録してください。
+                </p>
+            </div>
+
+            <p id="login-error" class="text-red-500 dark:text-dracula-red text-sm mt-3 hidden text-center"></p>
+        </div>
+    </div>
+
+    <div id="repository-form-panel"
+        class="hidden fixed inset-0 z-[130] items-center justify-center bg-black/40 dark:bg-black/60 p-4">
+        <div
+            class="w-full max-w-md rounded-lg border border-gray-200 dark:border-dracula-current bg-white dark:bg-dracula-sidebar p-5 shadow-2xl">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h3 id="repository-form-title" class="text-lg font-semibold text-gray-800 dark:text-dracula-purple">接続先を追加</h3>
+                <button id="close-repository-form-btn"
+                    class="icon-btn text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg"
+                    title="閉じる">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-600 dark:text-dracula-comment mb-1">表示名</label>
+                    <input type="text" id="display-name-input" placeholder="例: 大学院入試資料"
+                        class="w-full p-3 rounded bg-gray-50 dark:bg-dracula-bg border border-gray-300 dark:border-dracula-current text-gray-900 dark:text-dracula-fg focus:outline-none focus:border-blue-500 dark:focus:border-dracula-pink text-sm transition-colors">
+                </div>
                 <div>
                     <label class="block text-sm text-gray-600 dark:text-dracula-comment mb-1">対象リポジトリ <span
                             class="text-red-500 dark:text-dracula-red">*</span></label>
@@ -475,15 +600,42 @@
                 <div>
                     <label class="block text-sm text-gray-600 dark:text-dracula-comment mb-1">Personal Access Token
                         <span class="text-red-500 dark:text-dracula-red">*</span></label>
-                    <input type="password" id="token-input" placeholder="github_pat_..."
-                        class="w-full p-3 rounded bg-gray-50 dark:bg-dracula-bg border border-gray-300 dark:border-dracula-current text-gray-900 dark:text-dracula-fg focus:outline-none focus:border-blue-500 dark:focus:border-dracula-pink font-mono text-sm transition-colors">
+                    <div class="relative">
+                        <input type="password" id="token-input" placeholder="github_pat_..."
+                            class="w-full p-3 pr-11 rounded bg-gray-50 dark:bg-dracula-bg border border-gray-300 dark:border-dracula-current text-gray-900 dark:text-dracula-fg focus:outline-none focus:border-blue-500 dark:focus:border-dracula-pink font-mono text-sm transition-colors">
+                        <button id="toggle-token-visibility-btn" type="button"
+                            class="icon-btn absolute right-1.5 top-1/2 !h-8 !w-8 -translate-y-1/2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg"
+                            title="トークンを表示">
+                            <span class="material-symbols-outlined text-[18px]">visibility</span>
+                        </button>
+                    </div>
+                </div>
+                <label
+                    class="flex items-start gap-3 rounded border border-gray-200 dark:border-dracula-current bg-gray-50 dark:bg-dracula-bg p-3 cursor-pointer">
+                    <input type="checkbox" id="pdf-cache-input"
+                        class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-dracula-current dark:bg-dracula-sidebar">
+                    <span class="min-w-0">
+                        <span class="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-dracula-fg">
+                            <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                            PDFを端末にキャッシュ
+                        </span>
+                        <span id="pdf-cache-help"
+                            class="mt-1 block text-xs leading-relaxed text-gray-500 dark:text-dracula-comment">
+                            OFF推奨。ONの場合、PCは最大100MB、スマホは最大40MBまで保存し、古いPDFから自動削除します。
+                        </span>
+                    </span>
+                </label>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button id="cancel-repository-form-btn"
+                        class="rounded border border-gray-200 dark:border-dracula-current px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg">
+                        キャンセル
+                    </button>
+                    <button id="login-btn"
+                        class="rounded bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow transition hover:bg-blue-700 dark:bg-dracula-purple dark:text-dracula-bg dark:hover:bg-[#a67cf3]">
+                        保存して開く
+                    </button>
                 </div>
             </div>
-            <button id="login-btn"
-                class="w-full bg-blue-600 hover:bg-blue-700 dark:bg-dracula-purple dark:hover:bg-[#a67cf3] text-white dark:text-dracula-bg font-bold py-3 px-4 rounded transition duration-200 shadow">
-                ビューアーを起動
-            </button>
-            <p id="login-error" class="text-red-500 dark:text-dracula-red text-sm mt-3 hidden text-center"></p>
         </div>
     </div>
 
@@ -529,7 +681,7 @@
                 </div>
 
                 <button id="logout-btn"
-                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 dark:bg-dracula-bg dark:hover:bg-dracula-current dark:text-dracula-comment dark:hover:text-dracula-fg py-1.5 px-3 rounded border border-gray-200 dark:border-dracula-current transition-colors">設定</button>
+                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 dark:bg-dracula-bg dark:hover:bg-dracula-current dark:text-dracula-comment dark:hover:text-dracula-fg py-1.5 px-3 rounded border border-gray-200 dark:border-dracula-current transition-colors">接続先</button>
             </div>
         </header>
 

@@ -3,6 +3,8 @@
  * @property {string} repo GitHub repository in "owner/repo" form.
  * @property {string} path Root path inside the repository.
  * @property {string} token GitHub personal access token.
+ * @property {string} [displayName] User-facing repository profile name.
+ * @property {boolean} cachePdfBlobs Whether PDF binary files are cached in IndexedDB.
  */
 
 /**
