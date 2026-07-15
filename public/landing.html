@@ -12,15 +12,16 @@
       :root {
         color-scheme: dark;
         --bg: #282a36;
-        --paper: #21222c;
-        --panel: #44475a;
+        --paper: rgba(33, 34, 44, 0.62);
+        --panel: rgba(68, 71, 90, 0.54);
         --ink: #f8f8f2;
-        --muted: #c4cae3;
-        --line: #6272a4;
+        --muted: #d8ddf3;
+        --line: rgba(139, 233, 253, 0.32);
         --accent: #8be9fd;
         --accent-strong: #bd93f9;
         --mint: #bd93f9;
-        --shadow: 10px 10px 0 #151722;
+        --glass: rgba(248, 248, 242, 0.065);
+        --shadow: 0 26px 90px rgba(7, 10, 18, 0.42);
       }
 
       * {
@@ -32,8 +33,9 @@
         background:
           linear-gradient(rgba(248, 248, 242, 0.04) 1px, transparent 1px),
           linear-gradient(90deg, rgba(248, 248, 242, 0.04) 1px, transparent 1px),
-          radial-gradient(circle at 20% 18%, rgba(139, 233, 253, 0.18), transparent 24rem),
-          radial-gradient(circle at 80% 6%, rgba(189, 147, 249, 0.16), transparent 24rem),
+          radial-gradient(circle at 18% 20%, rgba(139, 233, 253, 0.22), transparent 24rem),
+          radial-gradient(circle at 82% 10%, rgba(189, 147, 249, 0.22), transparent 26rem),
+          radial-gradient(circle at 52% 72%, rgba(98, 114, 164, 0.26), transparent 30rem),
           var(--bg);
         background-size: 42px 42px;
         color: var(--ink);
@@ -70,11 +72,34 @@
       }
 
       .brand-mark {
+        align-items: center;
+        display: inline-flex;
+        justify-content: center;
         width: 38px;
         height: 38px;
         border: 2px solid var(--line);
         border-radius: 10px;
-        background: #11131c;
+        background: rgba(17, 19, 28, 0.72);
+        box-shadow: inset 0 1px 0 rgba(248, 248, 242, 0.18);
+      }
+
+      .brand-mark::before {
+        border: 2px solid var(--accent);
+        border-radius: 999px;
+        content: '';
+        height: 18px;
+        width: 18px;
+      }
+
+      .brand-mark::after {
+        background: var(--accent-strong);
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        content: '';
+        height: 8px;
+        margin-left: -6px;
+        margin-top: -16px;
+        width: 8px;
       }
 
       .nav-links {
@@ -93,7 +118,7 @@
         min-height: 650px;
         margin: 0 auto;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.88fr);
+        grid-template-columns: minmax(0, 0.92fr) minmax(380px, 1.08fr);
         gap: 48px;
         align-items: center;
         padding: 46px 0 72px;
@@ -104,32 +129,35 @@
         align-items: center;
         gap: 10px;
         padding: 8px 12px;
-        border: 2px solid var(--line);
+        border: 1px solid var(--line);
         border-radius: 999px;
-        color: var(--ink);
-        background: var(--accent);
+        color: var(--accent);
+        background: rgba(139, 233, 253, 0.1);
         font-size: 13px;
         font-weight: 900;
+        box-shadow: inset 0 1px 0 rgba(248, 248, 242, 0.16);
+        backdrop-filter: blur(18px);
       }
 
       .dot {
         width: 8px;
         height: 8px;
         border-radius: 999px;
-        background: #11131c;
+        background: var(--accent);
       }
 
       h1 {
         margin: 28px 0 22px;
-        font-size: clamp(52px, 8vw, 104px);
-        line-height: 0.92;
+        max-width: 620px;
+        font-size: clamp(38px, 4.8vw, 64px);
+        line-height: 1.08;
         letter-spacing: 0;
       }
 
       .lead {
-        max-width: 680px;
+        max-width: 560px;
         color: var(--muted);
-        font-size: clamp(18px, 2vw, 23px);
+        font-size: clamp(17px, 1.65vw, 21px);
       }
 
       .actions {
@@ -148,17 +176,19 @@
         border-radius: 8px;
         text-decoration: none;
         font-weight: 800;
-        border: 2px solid var(--line);
+        border: 1px solid var(--line);
+        box-shadow: inset 0 1px 0 rgba(248, 248, 242, 0.14);
+        backdrop-filter: blur(18px);
       }
 
       .button.primary {
-        background: var(--accent);
-        color: #11131c;
-        box-shadow: 5px 5px 0 var(--accent-strong);
+        background: linear-gradient(135deg, rgba(139, 233, 253, 0.22), rgba(189, 147, 249, 0.26));
+        color: var(--ink);
+        border-color: rgba(139, 233, 253, 0.48);
       }
 
       .button.secondary {
-        background: var(--paper);
+        background: rgba(248, 248, 242, 0.055);
       }
 
       .product-shot {
@@ -167,21 +197,23 @@
       }
 
       .browser {
+        animation: float-window 7s ease-in-out infinite;
         position: absolute;
         inset: 22px 0 auto auto;
         width: min(520px, 100%);
-        border: 2px solid var(--line);
+        border: 1px solid rgba(139, 233, 253, 0.36);
         border-radius: 18px;
         overflow: hidden;
         background: var(--paper);
         box-shadow: var(--shadow);
+        backdrop-filter: blur(24px);
       }
 
       .browser-bar {
         display: flex;
         gap: 8px;
         padding: 14px 16px;
-        border-bottom: 2px solid var(--line);
+        border-bottom: 1px solid rgba(139, 233, 253, 0.28);
         background: var(--panel);
       }
 
@@ -208,8 +240,8 @@
 
       .sidebar {
         padding: 18px;
-        border-right: 2px solid var(--line);
-        background: #191a22;
+        border-right: 1px solid rgba(139, 233, 253, 0.26);
+        background: rgba(17, 19, 28, 0.48);
       }
 
       .file {
@@ -220,6 +252,7 @@
       }
 
       .file.active {
+        animation: active-file 3s ease-in-out infinite;
         width: 88%;
         background: linear-gradient(90deg, var(--accent), var(--accent-strong));
       }
@@ -234,6 +267,7 @@
       }
 
       .line {
+        animation: shimmer-line 4s ease-in-out infinite;
         height: 12px;
         margin: 13px 0;
         border-radius: 999px;
@@ -245,15 +279,17 @@
       }
 
       .pdf-card {
+        animation: float-card 5.5s ease-in-out infinite;
         position: absolute;
         right: 310px;
         bottom: 12px;
         width: 210px;
         padding: 18px;
-        border: 2px solid var(--line);
+        border: 1px solid rgba(139, 233, 253, 0.38);
         border-radius: 14px;
-        background: #11131c;
+        background: rgba(17, 19, 28, 0.72);
         box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
       }
 
       .pdf-card strong {
@@ -293,11 +329,12 @@
       }
 
       .card {
-        border: 2px solid var(--line);
+        border: 1px solid rgba(139, 233, 253, 0.26);
         border-radius: 8px;
         background: var(--paper);
         padding: 24px;
-        box-shadow: 5px 5px 0 rgba(21, 21, 21, 0.12);
+        box-shadow: inset 0 1px 0 rgba(248, 248, 242, 0.1);
+        backdrop-filter: blur(18px);
       }
 
       .card h3 {
@@ -318,10 +355,11 @@
       }
 
       .story-panel {
-        border: 2px solid var(--line);
+        border: 1px solid rgba(139, 233, 253, 0.26);
         border-radius: 8px;
         padding: 30px;
         background: var(--paper);
+        backdrop-filter: blur(18px);
       }
 
       .story-panel.big {
@@ -343,14 +381,68 @@
       .step {
         position: relative;
         padding: 22px;
-        border: 2px solid var(--line);
+        border: 1px solid rgba(139, 233, 253, 0.26);
         border-radius: 8px;
         background: var(--paper);
+        backdrop-filter: blur(18px);
       }
 
       .step small {
         color: var(--accent);
         font-weight: 900;
+      }
+
+      @keyframes float-window {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+
+      @keyframes float-card {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-0.5deg);
+        }
+
+        50% {
+          transform: translateY(9px) rotate(0.5deg);
+        }
+      }
+
+      @keyframes active-file {
+        0%,
+        100% {
+          filter: saturate(1);
+        }
+
+        50% {
+          filter: saturate(1.35);
+        }
+      }
+
+      @keyframes shimmer-line {
+        0%,
+        100% {
+          opacity: 0.62;
+        }
+
+        50% {
+          opacity: 0.92;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .browser,
+        .file.active,
+        .line,
+        .pdf-card {
+          animation: none;
+        }
       }
 
       .code {
@@ -368,7 +460,7 @@
         margin: 0 auto;
         padding: 52px 0 76px;
         color: var(--muted);
-        border-top: 2px solid var(--line);
+        border-top: 1px solid rgba(139, 233, 253, 0.22);
       }
 
       @media (max-width: 840px) {
@@ -411,7 +503,7 @@
     <div class="page">
       <nav class="nav" aria-label="Primary">
         <div class="brand">
-          <img class="brand-mark" src="assets/app-icon-192.png" alt="" />
+          <span class="brand-mark" aria-hidden="true"></span>
           <span>RepoShelf</span>
         </div>
         <div class="nav-links">
@@ -425,7 +517,7 @@
         <section class="hero">
           <div>
             <div class="eyebrow"><span class="dot"></span> Private repository reader</div>
-            <h1>プライベートリポジトリを、読みやすい文書棚へ。</h1>
+            <h1>プライベート文書を、読みやすい棚へ。</h1>
             <p class="lead">
               GitHubに置いたMarkdownとPDFを、検索できて、読みやすくて、また戻ってこられる場所にまとめる。
               RepoShelfは、開発チームのためのプライベートドキュメントビューアーです。
@@ -469,7 +561,7 @@
           <div class="section-head">
             <h2>きっかけは、スマホで文書を開いたときの小さな不便でした。</h2>
             <p>
-              GitHubは保管場所としては強い。でも、読むための体験はコードレビュー寄りです。
+              GitHubは保管場所としては強い。でも、GitHubや公式アプリのビューワーだけでは読みづらい場面があります。
               RepoShelfは、文書だけを読むための面をリポジトリの上に重ねます。
             </p>
           </div>
@@ -483,7 +575,7 @@
             </div>
             <div class="story-panel">
               <p>
-                モバイルでは、プライベートリポジトリ内のPDFをその場で快適に読めない場面があります。
+                特にモバイルでは、プライベートリポジトリ内のPDFをその場で快適に読めない場面があります。
                 せっかくMarkdownやPDFとして整理した文書があるのに、読む体験が環境に左右される。
                 RepoShelfは、そのもどかしさから生まれました。
               </p>
