@@ -20,6 +20,7 @@ import { LoadingOverlay } from './components/LoadingOverlay';
 import { MarkdownViewer } from './components/MarkdownViewer';
 import { PdfViewer } from './components/PdfViewer';
 import { RepositoryProfileModal } from './components/RepositoryProfileModal';
+import { I18nProvider, type Language, useI18n } from './i18n';
 
 type SearchMode = 'file' | 'content' | 'current';
 type SearchResultFile = ViewerFile & { fragment?: string };
@@ -53,6 +54,22 @@ function formatResultPath(profile: RepositoryProfile, path: string) {
 }
 
 export function DocsViewerApp() {
+  const [language, setLanguage] = useState<Language>(() =>
+    localStorage.getItem('language_preference') === 'en' ? 'en' : 'ja',
+  );
+  useEffect(() => {
+    document.documentElement.lang = language;
+    localStorage.setItem('language_preference', language);
+  }, [language]);
+  return (
+    <I18nProvider language={language} setLanguage={setLanguage}>
+      <RepoShelfApp />
+    </I18nProvider>
+  );
+}
+
+function RepoShelfApp() {
+  const { language, setLanguage, t } = useI18n();
   const queryClient = useQueryClient();
   const [profiles, setProfiles] = useState<RepositoryProfile[]>(() => getRepositoryProfiles());
   const [activeProfile, setActiveProfile] = useState<RepositoryProfile | null>(() => getActiveProfile());
@@ -171,20 +188,20 @@ export function DocsViewerApp() {
         <div className="flex min-w-0 items-center">
           <button
             className="icon-btn mr-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg"
-            title="メニュー"
+            title={t.menu}
             type="button"
             onClick={() => setSidebarOpen((value) => !value)}
           >
             <Icon name="menu" />
           </button>
           <h1 className="max-w-[180px] truncate text-lg font-bold text-gray-800 dark:text-dracula-purple">
-            {currentFile?.name || activeProfile?.name || 'Docs Viewer'}
+            {currentFile?.name || activeProfile?.name || t.appName}
           </h1>
         </div>
         <div className="flex items-center gap-2">
           <button
             className="icon-btn text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg"
-            title="検索"
+            title={t.search}
             type="button"
             onClick={() => setSidebarOpen(true)}
           >
@@ -192,18 +209,26 @@ export function DocsViewerApp() {
           </button>
           <button
             className="icon-btn text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg"
-            title="テーマ切り替え"
+            title={t.theme}
             type="button"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           >
             <Icon name={theme === 'dark' ? 'light_mode' : 'dark_mode'} />
           </button>
           <button
+            type="button"
+            className="rounded border border-gray-200 bg-gray-100 px-2 py-1.5 text-xs font-semibold dark:border-dracula-current dark:bg-dracula-bg"
+            aria-label={language === 'ja' ? 'Switch to English' : '日本語に切り替え'}
+            onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
+          >
+            {language === 'ja' ? 'EN' : 'JA'}
+          </button>
+          <button
             className="rounded border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900 dark:border-dracula-current dark:bg-dracula-bg dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg"
             type="button"
             onClick={() => setLibraryOpen(true)}
           >
-            接続先
+            {t.connections}
           </button>
         </div>
       </header>
@@ -245,7 +270,7 @@ export function DocsViewerApp() {
         <main className="min-w-0 flex-1 overflow-y-auto bg-gray-50 dark:bg-dracula-bg">
           {!currentFile ? (
             <div className="flex h-full items-center justify-center p-6 text-center text-gray-500 dark:text-dracula-comment">
-              接続先とファイルを選択してください。
+              {t.select}
             </div>
           ) : currentFile.type === 'md' ? (
             markdownQuery.data ? (
@@ -305,6 +330,7 @@ function RepositoryLibrary({
   open,
   profiles,
 }: RepositoryLibraryProps) {
+  const { t } = useI18n();
   if (!open) return null;
 
   return (
@@ -313,13 +339,14 @@ function RepositoryLibrary({
         <div className="mb-6 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-dracula-cyan">
-              Repository Library
+              {t.appName}
             </p>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-dracula-purple">接続先ライブラリ</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-dracula-purple">{t.library}</h2>
+            <p className="mt-1 text-xs text-gray-500 dark:text-dracula-comment">{t.tagline}</p>
           </div>
           <button
             className="icon-btn -mr-2 -mt-2 text-gray-500 hover:bg-gray-100 dark:text-dracula-comment dark:hover:bg-dracula-current"
-            title="閉じる"
+            title={t.close}
             type="button"
             onClick={onClose}
           >
@@ -327,14 +354,14 @@ function RepositoryLibrary({
           </button>
         </div>
         <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-3 dark:border-dracula-current">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-dracula-fg">登録済み</h3>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-dracula-fg">{t.saved}</h3>
           <button
             className="inline-flex items-center gap-1 rounded border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 shadow-sm hover:bg-blue-100 dark:border-dracula-cyan/40 dark:bg-dracula-bg dark:text-dracula-cyan dark:hover:bg-dracula-current"
             type="button"
             onClick={onAdd}
           >
             <Icon className="text-[16px]" name="add" />
-            追加
+            {t.add}
           </button>
         </div>
         <div className="grid gap-2">
@@ -349,18 +376,20 @@ function RepositoryLibrary({
                     {profile.name}
                   </div>
                   <div className="truncate text-sm leading-5 text-gray-500 dark:text-dracula-comment">
-                    {profile.rootPath ? `${profile.repo} / ${profile.rootPath}` : `${profile.repo} / ルート`}
+                    {profile.rootPath
+                      ? `${profile.repo} / ${profile.rootPath}`
+                      : `${profile.repo} / ${t.root}`}
                   </div>
                 </button>
                 <div className="flex shrink-0 items-center gap-1">
                   {profile.id === activeProfile?.id ? (
                     <span className="inline-flex h-7 items-center rounded bg-blue-100 px-2 text-[11px] font-medium leading-none text-blue-700 dark:bg-dracula-current dark:text-dracula-cyan">
-                      前回
+                      {t.last}
                     </span>
                   ) : null}
                   <button
                     className="icon-btn !h-7 !w-7 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-dracula-cyan dark:hover:bg-dracula-current"
-                    title="編集"
+                    title={t.edit}
                     type="button"
                     onClick={() => onEdit(profile)}
                   >
@@ -368,7 +397,7 @@ function RepositoryLibrary({
                   </button>
                   <button
                     className="icon-btn !h-7 !w-7 text-red-500 hover:bg-red-50 hover:text-red-700 dark:text-dracula-red dark:hover:bg-dracula-current"
-                    title="削除"
+                    title={t.remove}
                     type="button"
                     onClick={() => onRemove(profile.id)}
                   >
@@ -380,7 +409,7 @@ function RepositoryLibrary({
           ))}
           {profiles.length === 0 ? (
             <p className="rounded border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-dracula-current dark:text-dracula-comment">
-              まだ接続先がありません。「追加」から最初のリポジトリを登録してください。
+              {t.none}
             </p>
           ) : null}
         </div>
@@ -448,13 +477,14 @@ function SearchPanel({
   setMode,
   setQuery,
 }: SearchPanelProps) {
+  const { t } = useI18n();
   const visibleResults: SearchResultFile[] = mode === 'file' ? fileResults : contentItems;
   const status = !query
     ? mode === 'file'
-      ? 'ファイル名やパスを入力して検索'
+      ? t.fileHint
       : mode === 'content'
-        ? '検索語を入力するとMarkdown本文を検索します'
-        : '現在のファイル内を検索'
+        ? t.contentHint
+        : t.currentHint
     : mode === 'file'
       ? `${fileResults.length}件のファイル`
       : mode === 'content'
@@ -467,14 +497,14 @@ function SearchPanel({
         <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-gray-400" name="search" />
         <input
           className="w-full rounded border border-gray-200 bg-gray-50 py-2 pl-9 pr-10 text-sm text-gray-900 transition-colors focus:border-blue-500 focus:outline-none dark:border-dracula-current dark:bg-dracula-bg dark:text-dracula-fg dark:focus:border-dracula-cyan"
-          placeholder="検索"
+          placeholder={t.search}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
         {query ? (
           <button
             className="icon-btn absolute right-1 top-1/2 !h-8 !w-8 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:text-dracula-comment dark:hover:text-dracula-fg"
-            title="検索をクリア"
+            title={t.clear}
             type="button"
             onClick={() => setQuery('')}
           >
@@ -494,7 +524,7 @@ function SearchPanel({
             type="button"
             onClick={() => setMode(item)}
           >
-            {item === 'file' ? 'ファイル' : item === 'content' ? '本文' : '現在'}
+            {item === 'file' ? t.file : item === 'content' ? t.content : t.current}
           </button>
         ))}
       </div>

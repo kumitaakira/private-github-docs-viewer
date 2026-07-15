@@ -5,9 +5,9 @@ export const repositoryProfileInputSchema = z.object({
   repo: z
     .string()
     .trim()
-    .regex(/^[^/\s]+\/[^/\s]+$/, 'owner/repo の形式で入力してください'),
+    .regex(/^[^/\s]+\/[^/\s]+$/, 'invalidRepo'),
   rootPath: z.string().trim().optional().default(''),
-  token: z.string().trim().min(1, 'Personal Access Token は必須です'),
+  token: z.string().trim().min(1, 'tokenRequired'),
   cachePdfBlobs: z.boolean().optional().default(false),
 });
 

@@ -1,7 +1,7 @@
 {
-  "name": "Private Docs Viewer",
-  "short_name": "Docs Viewer",
-  "description": "Private GitHubリポジトリのMarkdownとPDFを安全に閲覧するドキュメントビューアー。",
+  "name": "RepoShelf",
+  "short_name": "RepoShelf",
+  "description": "Your private repository, made readable. Markdown and PDF documents in Japanese and English.",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",
