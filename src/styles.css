@@ -59,6 +59,14 @@ body {
   width: 2.25rem;
 }
 
+details[open] > summary .tree-chevron {
+  transform: rotate(90deg);
+}
+
+.tree-chevron {
+  transition: transform 0.15s ease;
+}
+
 .waiting-orbit {
   height: 4rem;
   position: relative;
@@ -154,8 +162,25 @@ body {
   padding: 0.12rem 0.3rem;
 }
 
+.pdf-viewer {
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+
 .pdf-page canvas {
   height: 100%;
   object-fit: contain;
   width: 100%;
+}
+
+.pdf-pages {
+  max-width: none;
+  width: var(--pdf-mobile-width);
+}
+
+@media (min-width: 768px) {
+  .pdf-pages {
+    max-width: none;
+    width: var(--pdf-desktop-width);
+  }
 }
