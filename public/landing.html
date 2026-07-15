@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RepoShelf | プライベートリポジトリを、読みやすい文書棚へ。</title>
+    <meta
+      name="description"
+      content="RepoShelfは、プライベートリポジトリのMarkdownとPDFを読みやすく扱うためのドキュメントビューアーです。"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #282a36;
+        --paper: #21222c;
+        --panel: #44475a;
+        --ink: #f8f8f2;
+        --muted: #c4cae3;
+        --line: #6272a4;
+        --accent: #8be9fd;
+        --accent-strong: #bd93f9;
+        --mint: #bd93f9;
+        --shadow: 10px 10px 0 #151722;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(rgba(248, 248, 242, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(248, 248, 242, 0.04) 1px, transparent 1px),
+          radial-gradient(circle at 20% 18%, rgba(139, 233, 253, 0.18), transparent 24rem),
+          radial-gradient(circle at 80% 6%, rgba(189, 147, 249, 0.16), transparent 24rem),
+          var(--bg);
+        background-size: 42px 42px;
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.75;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        overflow: hidden;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 22px 0;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        background: #11131c;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 18px;
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+      }
+
+      .hero {
+        width: min(1120px, calc(100% - 32px));
+        min-height: 650px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.88fr);
+        gap: 48px;
+        align-items: center;
+        padding: 46px 0 72px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border: 2px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink);
+        background: var(--accent);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #11131c;
+      }
+
+      h1 {
+        margin: 28px 0 22px;
+        font-size: clamp(52px, 8vw, 104px);
+        line-height: 0.92;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 680px;
+        color: var(--muted);
+        font-size: clamp(18px, 2vw, 23px);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 34px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 800;
+        border: 2px solid var(--line);
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: #11131c;
+        box-shadow: 5px 5px 0 var(--accent-strong);
+      }
+
+      .button.secondary {
+        background: var(--paper);
+      }
+
+      .product-shot {
+        position: relative;
+        min-height: 500px;
+      }
+
+      .browser {
+        position: absolute;
+        inset: 22px 0 auto auto;
+        width: min(520px, 100%);
+        border: 2px solid var(--line);
+        border-radius: 18px;
+        overflow: hidden;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .browser-bar {
+        display: flex;
+        gap: 8px;
+        padding: 14px 16px;
+        border-bottom: 2px solid var(--line);
+        background: var(--panel);
+      }
+
+      .browser-bar span {
+        width: 11px;
+        height: 11px;
+        border-radius: 999px;
+        background: #ff5555;
+      }
+
+      .browser-bar span:nth-child(2) {
+        background: #f1fa8c;
+      }
+
+      .browser-bar span:nth-child(3) {
+        background: var(--mint);
+      }
+
+      .app-grid {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        min-height: 360px;
+      }
+
+      .sidebar {
+        padding: 18px;
+        border-right: 2px solid var(--line);
+        background: #191a22;
+      }
+
+      .file {
+        height: 12px;
+        margin: 14px 0;
+        border-radius: 999px;
+        background: rgba(248, 248, 242, 0.13);
+      }
+
+      .file.active {
+        width: 88%;
+        background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+      }
+
+      .reader {
+        padding: 28px;
+      }
+
+      .reader h2 {
+        margin: 0 0 18px;
+        font-size: 26px;
+      }
+
+      .line {
+        height: 12px;
+        margin: 13px 0;
+        border-radius: 999px;
+        background: rgba(248, 248, 242, 0.12);
+      }
+
+      .line.short {
+        width: 58%;
+      }
+
+      .pdf-card {
+        position: absolute;
+        right: 310px;
+        bottom: 12px;
+        width: 210px;
+        padding: 18px;
+        border: 2px solid var(--line);
+        border-radius: 14px;
+        background: #11131c;
+        box-shadow: var(--shadow);
+      }
+
+      .pdf-card strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--ink);
+      }
+
+      section {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 84px 0;
+      }
+
+      .section-head {
+        max-width: 760px;
+        margin-bottom: 34px;
+      }
+
+      .section-head h2 {
+        margin: 0 0 14px;
+        font-size: clamp(32px, 4vw, 52px);
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .section-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 24px;
+        box-shadow: 5px 5px 0 rgba(21, 21, 21, 0.12);
+      }
+
+      .card h3 {
+        margin: 0 0 10px;
+        font-size: 20px;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .story {
+        display: grid;
+        grid-template-columns: 0.86fr 1.14fr;
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .story-panel {
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 30px;
+        background: var(--paper);
+      }
+
+      .story-panel.big {
+        background: linear-gradient(135deg, rgba(139, 233, 253, 0.2), rgba(189, 147, 249, 0.2));
+      }
+
+      .quote {
+        font-size: 28px;
+        line-height: 1.45;
+        font-weight: 800;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .step {
+        position: relative;
+        padding: 22px;
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+
+      .step small {
+        color: var(--accent);
+        font-weight: 900;
+      }
+
+      .code {
+        margin-top: 22px;
+        padding: 20px;
+        border-radius: 8px;
+        background: #090b10;
+        border: 1px solid var(--line);
+        color: #d9f99d;
+        overflow-x: auto;
+      }
+
+      .footer {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 52px 0 76px;
+        color: var(--muted);
+        border-top: 2px solid var(--line);
+      }
+
+      @media (max-width: 840px) {
+        .nav {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .hero,
+        .story {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          min-height: auto;
+          padding-top: 36px;
+        }
+
+        .product-shot {
+          min-height: 470px;
+        }
+
+        .browser {
+          inset: 0 auto auto 0;
+        }
+
+        .pdf-card {
+          right: 14px;
+          bottom: 0;
+        }
+
+        .cards,
+        .steps {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav" aria-label="Primary">
+        <div class="brand">
+          <img class="brand-mark" src="assets/app-icon-192.png" alt="" />
+          <span>RepoShelf</span>
+        </div>
+        <div class="nav-links">
+          <a href="#why">なぜ作るのか</a>
+          <a href="#features">できること</a>
+          <a href="#use">使い方</a>
+        </div>
+      </nav>
+
+      <main>
+        <section class="hero">
+          <div>
+            <div class="eyebrow"><span class="dot"></span> Private repository reader</div>
+            <h1>プライベートリポジトリを、読みやすい文書棚へ。</h1>
+            <p class="lead">
+              GitHubに置いたMarkdownとPDFを、検索できて、読みやすくて、また戻ってこられる場所にまとめる。
+              RepoShelfは、開発チームのためのプライベートドキュメントビューアーです。
+            </p>
+            <div class="actions">
+              <a class="button primary" href="https://kumitaakira.github.io/private-github-docs-viewer/">RepoShelfを開く</a>
+              <a class="button secondary" href="#use">使い方を見る</a>
+            </div>
+          </div>
+
+          <div class="product-shot" aria-label="RepoShelf product preview">
+            <div class="browser">
+              <div class="browser-bar"><span></span><span></span><span></span></div>
+              <div class="app-grid">
+                <div class="sidebar">
+                  <div class="file active"></div>
+                  <div class="file"></div>
+                  <div class="file" style="width: 72%"></div>
+                  <div class="file" style="width: 92%"></div>
+                  <div class="file" style="width: 64%"></div>
+                </div>
+                <div class="reader">
+                  <h2>docs/release-plan.md</h2>
+                  <div class="line"></div>
+                  <div class="line"></div>
+                  <div class="line short"></div>
+                  <div class="line"></div>
+                  <div class="line" style="width: 84%"></div>
+                  <div class="line short"></div>
+                </div>
+              </div>
+            </div>
+            <div class="pdf-card">
+              <strong>PDFも同じ棚へ</strong>
+              仕様書、提案資料、議事録をブラウザで連続表示。
+            </div>
+          </div>
+        </section>
+
+        <section id="why">
+          <div class="section-head">
+            <h2>きっかけは、スマホで文書を開いたときの小さな不便でした。</h2>
+            <p>
+              GitHubは保管場所としては強い。でも、読むための体験はコードレビュー寄りです。
+              RepoShelfは、文書だけを読むための面をリポジトリの上に重ねます。
+            </p>
+          </div>
+
+          <div class="story">
+            <div class="story-panel big">
+              <div class="quote">
+                READMEは便利。<br />
+                でも、LPほど豊かには見せづらい。
+              </div>
+            </div>
+            <div class="story-panel">
+              <p>
+                READMEはOSSの入口として優れています。一方で、プロダクトの価値や導線をしっかり見せたいとき、
+                GitHub上のMarkdown/HTMLには表現の制限があります。
+              </p>
+              <p>
+                さらにモバイルでは、プライベートリポジトリ内のPDFをその場で快適に読めない場面もあります。
+                せっかくMarkdownやPDFとして整理した文書があるのに、読む体験が環境に左右される。
+                RepoShelfは、そのもどかしさから生まれました。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="features">
+          <div class="section-head">
+            <h2>読む、探す、戻る。文書閲覧に必要なことをひとつに。</h2>
+            <p>
+              大げさなナレッジベースではなく、いまあるprivate repoをそのまま使うための軽い閲覧体験です。
+            </p>
+          </div>
+
+          <div class="cards">
+            <article class="card">
+              <h3>MarkdownとPDF</h3>
+              <p>コード、数式、タスクリスト、PDFを同じアプリ内で扱えます。</p>
+            </article>
+            <article class="card">
+              <h3>近くにある検索</h3>
+              <p>ファイル名、パス、Markdown本文、現在のファイル内を検索できます。</p>
+            </article>
+            <article class="card">
+              <h3>複数リポジトリ</h3>
+              <p>よく使う接続先を保存し、プロジェクトごとに文書棚を切り替えられます。</p>
+            </article>
+            <article class="card">
+              <h3>読みやすい表示</h3>
+              <p>ライト/ダークテーマとPDFズームで、作業環境に合わせて読めます。</p>
+            </article>
+            <article class="card">
+              <h3>ブラウザで始める</h3>
+              <p>提供中のGitHub Pages版から開き、接続先とトークンをブラウザ内で扱います。</p>
+            </article>
+            <article class="card">
+              <h3>OSSらしくシンプル</h3>
+              <p>React、TypeScript、Viteを中心に、読みやすい構成で開発できます。</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="use">
+          <div class="section-head">
+            <h2>公開版から、すぐに文書棚を開く。</h2>
+            <p>
+              このリポジトリはセルフホストもできますが、まずは提供中のGitHub Pages版からそのまま使えます。
+              対象リポジトリとPersonal Access Tokenを登録すると、MarkdownとPDFを読み始められます。
+            </p>
+          </div>
+          <div class="steps">
+            <div class="step"><small>01</small><br />RepoShelfを開く</div>
+            <div class="step"><small>02</small><br />owner/repoを入力</div>
+            <div class="step"><small>03</small><br />Personal Access Tokenを登録</div>
+            <div class="step"><small>04</small><br />Markdown/PDFを読む</div>
+          </div>
+          <div class="actions">
+            <a class="button primary" href="https://kumitaakira.github.io/private-github-docs-viewer/">RepoShelfを開く</a>
+            <a class="button secondary" href="https://github.com/kumitaakira/private-github-docs-viewer#readme">READMEを見る</a>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        RepoShelf - プライベートリポジトリを、毎日ひらきたくなる文書棚に。
+      </footer>
+    </div>
+  </body>
+</html>
