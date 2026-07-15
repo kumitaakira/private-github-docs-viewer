@@ -146,9 +146,23 @@ async function openFile(file, { replaceUrl = false, updateUrl = true } = {}) {
 
 async function loadRepositoryIndex() {
     searchStatus.textContent = 'ファイル一覧を取得しています...';
-    const { files, truncated } = await repositoryIndex.load();
-    searchStatus.textContent = truncated ? 'ファイル一覧が大きいため一部のみ検索します' : `${files.length}件のファイルを検索できます`;
-    return files;
+    const index = await repositoryIndex.load();
+    if (index.stale) {
+        searchStatus.textContent = `${index.files.length}件のファイル (古いキャッシュ)`;
+    } else if (index.fromCache) {
+        searchStatus.textContent = `${index.files.length}件のファイル (キャッシュ)`;
+    } else {
+        searchStatus.textContent = index.truncated
+            ? 'ファイル一覧が大きいため一部のみ検索します'
+            : `${index.files.length}件のファイルを検索できます`;
+    }
+    return index;
+}
+
+function formatSearchSourceLabel(index) {
+    if (index?.stale) return ' (古いキャッシュ)';
+    if (index?.fromCache) return ' (キャッシュ)';
+    return '';
 }
 
 function setSearchMode(mode) {
@@ -178,10 +192,10 @@ function makeResultPath(file) {
     return file.path.replace(new RegExp(`^${rootPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/?`), '');
 }
 
-function renderSearchFileResults(files, query) {
+function renderSearchFileResults(files, query, index) {
     searchResults.innerHTML = '';
     searchResults.classList.toggle('hidden', files.length === 0);
-    searchStatus.textContent = query ? `${files.length}件のファイル` : '';
+    searchStatus.textContent = query ? `${files.length}件のファイル${formatSearchSourceLabel(index)}` : '';
 
     files.slice(0, 60).forEach(file => {
         const row = document.createElement('button');
@@ -213,9 +227,9 @@ async function runFileSearch(query) {
         return;
     }
 
-    const files = await loadRepositoryIndex();
+    const index = await loadRepositoryIndex();
     const needle = query.toLowerCase();
-    renderSearchFileResults(files.filter(file => file.path.toLowerCase().includes(needle)), query);
+    renderSearchFileResults(index.files.filter(file => file.path.toLowerCase().includes(needle)), query, index);
 }
 
 function renderContentResults(items, query) {
