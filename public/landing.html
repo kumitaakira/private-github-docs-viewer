@@ -412,7 +412,7 @@
         <div class="nav-links">
           <a href="#why">なぜ作るのか</a>
           <a href="#features">できること</a>
-          <a href="#start">はじめる</a>
+          <a href="#use">使い方</a>
         </div>
       </nav>
 
@@ -426,8 +426,8 @@
               RepoShelfは、開発チームのためのプライベートドキュメントビューアーです。
             </p>
             <div class="actions">
-              <a class="button primary" href="https://github.com/kumitaakira/private-github-docs-viewer#readme">READMEを見る</a>
-              <a class="button secondary" href="#start">ローカルで試す</a>
+              <a class="button primary" href="https://kumitaakira.github.io/private-github-docs-viewer/">RepoShelfを開く</a>
+              <a class="button secondary" href="#use">使い方を見る</a>
             </div>
           </div>
 
@@ -516,8 +516,8 @@
               <p>ライト/ダークテーマとPDFズームで、作業環境に合わせて読めます。</p>
             </article>
             <article class="card">
-              <h3>手元で始める</h3>
-              <p>接続先とトークンはブラウザのローカルストレージで扱います。</p>
+              <h3>ブラウザで始める</h3>
+              <p>提供中のGitHub Pages版から開き、接続先とトークンをブラウザ内で扱います。</p>
             </article>
             <article class="card">
               <h3>OSSらしくシンプル</h3>
@@ -526,19 +526,24 @@
           </div>
         </section>
 
-        <section id="start">
+        <section id="use">
           <div class="section-head">
-            <h2>3ステップで文書棚を開く。</h2>
-            <p>ローカルで立ち上げ、対象リポジトリとPersonal Access Tokenを登録するだけです。</p>
+            <h2>公開版から、すぐに文書棚を開く。</h2>
+            <p>
+              このリポジトリはセルフホストもできますが、まずは提供中のGitHub Pages版からそのまま使えます。
+              対象リポジトリとPersonal Access Tokenを登録すると、MarkdownとPDFを読み始められます。
+            </p>
           </div>
           <div class="steps">
-            <div class="step"><small>01</small><br />依存関係をインストール</div>
-            <div class="step"><small>02</small><br />開発サーバーを起動</div>
-            <div class="step"><small>03</small><br />owner/repoとTokenを登録</div>
+            <div class="step"><small>01</small><br />RepoShelfを開く</div>
+            <div class="step"><small>02</small><br />owner/repoを入力</div>
+            <div class="step"><small>03</small><br />Personal Access Tokenを登録</div>
             <div class="step"><small>04</small><br />Markdown/PDFを読む</div>
           </div>
-          <pre class="code"><code>npm install
-npm run dev</code></pre>
+          <div class="actions">
+            <a class="button primary" href="https://kumitaakira.github.io/private-github-docs-viewer/">RepoShelfを開く</a>
+            <a class="button secondary" href="https://github.com/kumitaakira/private-github-docs-viewer#readme">READMEを見る</a>
+          </div>
         </section>
       </main>
 
