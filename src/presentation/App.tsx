@@ -292,7 +292,7 @@ function RepoShelfApp() {
             setMode={setSearchMode}
             setQuery={setSearchQuery}
           />
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
             <FileList
               activePath={currentFile?.path}
               files={repositoryIndex.data?.files || []}
@@ -301,7 +301,11 @@ function RepoShelfApp() {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-y-auto bg-gray-50 dark:bg-dracula-bg">
+        <main
+          className={`min-h-0 min-w-0 flex-1 bg-gray-50 dark:bg-dracula-bg ${
+            currentFile?.type === 'pdf' ? 'overflow-hidden' : 'overflow-y-auto'
+          }`}
+        >
           {!currentFile ? (
             <div className="flex h-full items-center justify-center p-6 text-center text-gray-500 dark:text-dracula-comment">
               {t.select}
@@ -464,7 +468,7 @@ function FileList({
   const tree = useMemo(() => buildFileTree(files), [files]);
 
   return (
-    <div className="text-sm">
+    <div className="text-xs">
       {files.length > 0 ? (
         <FileTreeBranch activePath={activePath} node={tree} onOpenFile={onOpenFile} root />
       ) : (
@@ -493,7 +497,9 @@ function FileTreeBranch({
   return (
     <ul
       className={
-        root ? 'space-y-1' : 'ml-3 mt-1 space-y-1 border-l border-gray-200 pl-2 dark:border-dracula-current'
+        root
+          ? 'space-y-0.5'
+          : 'ml-2 mt-0.5 space-y-0.5 border-l border-gray-200 pl-1.5 dark:border-dracula-current'
       }
     >
       {folders.map((folder) => {
@@ -504,15 +510,15 @@ function FileTreeBranch({
           <li key={folder.path}>
             <details open={containsActive || root || undefined}>
               <summary
-                className="flex min-h-8 cursor-pointer list-none items-center gap-2 rounded px-2 py-1 text-gray-700 transition-colors hover:bg-gray-100 dark:text-dracula-fg dark:hover:bg-dracula-current/70"
+                className="flex min-h-7 cursor-pointer list-none items-center gap-1.5 rounded px-1.5 py-0.5 text-gray-700 transition-colors hover:bg-gray-100 dark:text-dracula-fg dark:hover:bg-dracula-current/70"
                 title={folder.path}
               >
                 <Icon
-                  className="tree-chevron shrink-0 text-[18px] text-gray-400 dark:text-dracula-comment"
+                  className="tree-chevron shrink-0 text-[16px] text-gray-400 dark:text-dracula-comment"
                   name="chevron_right"
                 />
                 <Icon
-                  className="shrink-0 text-[20px] text-yellow-500 dark:text-dracula-yellow"
+                  className="shrink-0 text-[18px] text-yellow-500 dark:text-dracula-yellow"
                   name="folder"
                 />
                 <span className="min-w-0 truncate">{folder.name}</span>
@@ -525,7 +531,7 @@ function FileTreeBranch({
       {files.map((file) => (
         <li key={file.path}>
           <button
-            className={`flex min-h-8 w-full items-center gap-2 rounded px-2 py-1 text-left transition-colors ${
+            className={`flex min-h-7 w-full items-center gap-1.5 rounded px-1.5 py-0.5 text-left transition-colors ${
               activePath === file.path
                 ? 'bg-blue-50 text-blue-700 dark:bg-dracula-current dark:text-dracula-cyan'
                 : 'text-gray-700 hover:bg-gray-100 dark:text-dracula-fg dark:hover:bg-dracula-current/70'
@@ -534,12 +540,12 @@ function FileTreeBranch({
             type="button"
             onClick={() => onOpenFile(file)}
           >
-            <span className="w-[18px] shrink-0" />
+            <span className="w-4 shrink-0" />
             <Icon
               className={
                 file.type === 'pdf'
-                  ? 'shrink-0 text-red-500'
-                  : 'shrink-0 text-blue-600 dark:text-dracula-cyan'
+                  ? 'shrink-0 text-[18px] text-red-500'
+                  : 'shrink-0 text-[18px] text-blue-600 dark:text-dracula-cyan'
               }
               name={iconForFile(file)}
             />

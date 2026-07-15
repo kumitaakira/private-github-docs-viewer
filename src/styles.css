@@ -163,6 +163,7 @@ details[open] > summary .tree-chevron {
 }
 
 .pdf-viewer {
+  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-x pan-y;
 }

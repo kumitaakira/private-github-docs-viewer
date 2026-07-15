@@ -127,24 +127,32 @@ export function PdfViewer({ bytes }: PdfViewerProps) {
   const desktopWidth = Math.round(DESKTOP_BASE_WIDTH * (zoom / 100));
 
   return (
-    <div className="pdf-viewer mx-auto flex min-h-full w-full flex-col items-center space-y-3 overflow-x-auto px-3 py-4">
-      <div className="sticky top-3 z-10 mx-auto flex w-fit items-center gap-1 rounded border border-gray-200 bg-white/90 p-1 text-sm shadow-sm backdrop-blur dark:border-dracula-current dark:bg-dracula-sidebar/90">
+    <div className="pdf-viewer h-full w-full overflow-auto px-3 py-4">
+      <div className="pdf-toolbar sticky top-0 z-10 mx-auto mb-3 flex w-fit items-center gap-0.5 rounded border border-gray-200 bg-white/90 p-0.5 text-xs shadow-sm backdrop-blur dark:border-dracula-current dark:bg-dracula-sidebar/90">
         <button
-          className="rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-dracula-current"
+          aria-label="縮小"
+          className="rounded px-2 py-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-dracula-current"
+          disabled={zoom === MIN_ZOOM}
           onClick={() => changeZoom(-25)}
           type="button"
         >
           -
         </button>
+        {zoom !== 100 ? (
+          <button
+            aria-label={`倍率${zoom}%、クリックで100%に戻す`}
+            className="min-w-11 rounded px-1.5 py-1 font-mono hover:bg-gray-100 dark:hover:bg-dracula-current"
+            onClick={() => setZoom(100)}
+            title="100%に戻す"
+            type="button"
+          >
+            {zoom}%
+          </button>
+        ) : null}
         <button
-          className="w-12 rounded px-2 py-1 font-mono hover:bg-gray-100 dark:hover:bg-dracula-current"
-          onClick={() => setZoom(100)}
-          type="button"
-        >
-          {zoom}%
-        </button>
-        <button
-          className="rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-dracula-current"
+          aria-label="拡大"
+          className="rounded px-2 py-1 hover:bg-gray-100 disabled:opacity-40 dark:hover:bg-dracula-current"
+          disabled={zoom === MAX_ZOOM}
           onClick={() => changeZoom(25)}
           type="button"
         >
@@ -152,7 +160,7 @@ export function PdfViewer({ bytes }: PdfViewerProps) {
         </button>
       </div>
       <div
-        className="pdf-pages space-y-3"
+        className="pdf-pages mx-auto space-y-3"
         style={
           {
             '--pdf-desktop-width': `${desktopWidth}px`,
