@@ -1,0 +1,15 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: '*.{ts,tsx}'
+      run: npm run lint -- --fix
+      stage_fixed: true
+    format:
+      glob: '*.{ts,tsx,css,md,json,yml,yaml}'
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+    typecheck:
+      run: npm run typecheck
+    test:
+      run: npm run test:run
