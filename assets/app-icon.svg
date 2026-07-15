@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">Private Docs Viewer</title>
+  <title id="title">RepoShelf</title>
   <desc id="desc">Blue and purple dots orbiting concentric rings</desc>
   <rect width="512" height="512" rx="112" fill="#11131c"/>
   <circle cx="256" cy="256" r="142" fill="none" stroke="#8be9fd" stroke-width="30"/>

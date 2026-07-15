@@ -1,7 +1,7 @@
 {
-  "name": "private-github-docs-viewer",
+  "name": "reposhelf",
   "version": "1.0.0",
-  "description": "Private GitHub repository Markdown/PDF viewer.",
+  "description": "Your private repository, made readable.",
   "private": true,
   "scripts": {
     "dev": "vite",
