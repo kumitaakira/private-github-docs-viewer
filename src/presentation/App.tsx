@@ -24,6 +24,12 @@ import { I18nProvider, type Language, useI18n } from './i18n';
 
 type SearchMode = 'file' | 'content' | 'current';
 type SearchResultFile = ViewerFile & { fragment?: string };
+type FileTreeNode = {
+  name: string;
+  path: string;
+  folders: Map<string, FileTreeNode>;
+  files: ViewerFile[];
+};
 
 function getUrlFilePath() {
   const hashPrefix = '#/file/';
@@ -46,6 +52,34 @@ function setUrlFilePath(filePath: string, replace = false) {
 
 function iconForFile(file: ViewerFile) {
   return file.type === 'pdf' ? 'picture_as_pdf' : 'description';
+}
+
+function createFileTreeNode(name = '', path = ''): FileTreeNode {
+  return {
+    name,
+    path,
+    folders: new Map(),
+    files: [],
+  };
+}
+
+function buildFileTree(files: ViewerFile[]) {
+  const root = createFileTreeNode();
+
+  files.forEach((file) => {
+    const parts = file.path.split('/').filter(Boolean);
+    if (parts.length === 0) return;
+
+    let node = root;
+    parts.slice(0, -1).forEach((part) => {
+      const folderPath = node.path ? `${node.path}/${part}` : part;
+      if (!node.folders.has(part)) node.folders.set(part, createFileTreeNode(part, folderPath));
+      node = node.folders.get(part)!;
+    });
+    node.files.push(file);
+  });
+
+  return root;
 }
 
 function formatResultPath(profile: RepositoryProfile, path: string) {
@@ -427,30 +461,93 @@ function FileList({
   files: ViewerFile[];
   onOpenFile: (file: ViewerFile) => void;
 }) {
+  const tree = useMemo(() => buildFileTree(files), [files]);
+
   return (
-    <div className="space-y-1">
-      {files.map((file) => (
-        <button
-          className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors ${
-            activePath === file.path
-              ? 'bg-blue-50 text-blue-700 dark:bg-dracula-current dark:text-dracula-cyan'
-              : 'text-gray-700 hover:bg-gray-100 dark:text-dracula-fg dark:hover:bg-dracula-current/70'
-          }`}
-          key={file.path}
-          title={file.path}
-          type="button"
-          onClick={() => onOpenFile(file)}
-        >
-          <Icon
-            className={
-              file.type === 'pdf' ? 'shrink-0 text-red-500' : 'shrink-0 text-blue-600 dark:text-dracula-cyan'
-            }
-            name={iconForFile(file)}
-          />
-          <span className="min-w-0 truncate">{file.name}</span>
-        </button>
-      ))}
+    <div className="text-sm">
+      {files.length > 0 ? (
+        <FileTreeBranch activePath={activePath} node={tree} onOpenFile={onOpenFile} root />
+      ) : (
+        <p className="rounded border border-dashed border-gray-200 p-3 text-xs text-gray-500 dark:border-dracula-current dark:text-dracula-comment">
+          ファイルがありません。
+        </p>
+      )}
     </div>
+  );
+}
+
+function FileTreeBranch({
+  activePath,
+  node,
+  onOpenFile,
+  root = false,
+}: {
+  activePath?: string;
+  node: FileTreeNode;
+  onOpenFile: (file: ViewerFile) => void;
+  root?: boolean;
+}) {
+  const folders = Array.from(node.folders.values()).sort((a, b) => a.name.localeCompare(b.name));
+  const files = node.files.slice().sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <ul
+      className={
+        root ? 'space-y-1' : 'ml-3 mt-1 space-y-1 border-l border-gray-200 pl-2 dark:border-dracula-current'
+      }
+    >
+      {folders.map((folder) => {
+        const containsActive = Boolean(
+          activePath && (activePath === folder.path || activePath.startsWith(`${folder.path}/`)),
+        );
+        return (
+          <li key={folder.path}>
+            <details open={containsActive || root || undefined}>
+              <summary
+                className="flex min-h-8 cursor-pointer list-none items-center gap-2 rounded px-2 py-1 text-gray-700 transition-colors hover:bg-gray-100 dark:text-dracula-fg dark:hover:bg-dracula-current/70"
+                title={folder.path}
+              >
+                <Icon
+                  className="tree-chevron shrink-0 text-[18px] text-gray-400 dark:text-dracula-comment"
+                  name="chevron_right"
+                />
+                <Icon
+                  className="shrink-0 text-[20px] text-yellow-500 dark:text-dracula-yellow"
+                  name="folder"
+                />
+                <span className="min-w-0 truncate">{folder.name}</span>
+              </summary>
+              <FileTreeBranch activePath={activePath} node={folder} onOpenFile={onOpenFile} />
+            </details>
+          </li>
+        );
+      })}
+      {files.map((file) => (
+        <li key={file.path}>
+          <button
+            className={`flex min-h-8 w-full items-center gap-2 rounded px-2 py-1 text-left transition-colors ${
+              activePath === file.path
+                ? 'bg-blue-50 text-blue-700 dark:bg-dracula-current dark:text-dracula-cyan'
+                : 'text-gray-700 hover:bg-gray-100 dark:text-dracula-fg dark:hover:bg-dracula-current/70'
+            }`}
+            title={file.path}
+            type="button"
+            onClick={() => onOpenFile(file)}
+          >
+            <span className="w-[18px] shrink-0" />
+            <Icon
+              className={
+                file.type === 'pdf'
+                  ? 'shrink-0 text-red-500'
+                  : 'shrink-0 text-blue-600 dark:text-dracula-cyan'
+              }
+              name={iconForFile(file)}
+            />
+            <span className="min-w-0 truncate">{file.name}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 

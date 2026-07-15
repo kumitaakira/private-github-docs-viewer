@@ -1,44 +1,55 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext } from 'react';
 
 export type Language = 'ja' | 'en';
 
-const dictionary = {
-  ja: {
-    appName: 'RepoShelf',
-    tagline: 'あなたのプライベートリポジトリを、読みやすく。',
-    menu: 'メニュー',
-    search: '検索',
-    theme: 'テーマ切り替え',
-    connections: '接続先',
-    select: '接続先とファイルを選択してください。',
-    library: '接続先ライブラリ',
-    saved: '登録済み',
-    add: '追加',
-    close: '閉じる',
-    root: 'ルート',
-    last: '前回',
-    edit: '編集',
-    remove: '削除',
-    none: 'まだ接続先がありません。「追加」から最初のリポジトリを登録してください。',
-    fileHint: 'ファイル名やパスを入力して検索',
-    contentHint: '検索語を入力するとMarkdown本文を検索します',
-    currentHint: '現在のファイル内を検索',
-    file: 'ファイル',
-    content: '本文',
-    current: '現在',
-    clear: '検索をクリア',
-    addRepo: '接続先を追加',
-    editRepo: '接続先を編集',
-    displayName: '表示名',
-    repository: '対象リポジトリ',
-    rootPath: 'ルートパス（省略可）',
-    tokenRequired: 'Personal Access Token は必須です',
-    invalidRepo: 'owner/repo の形式で入力してください',
-    cancel: 'キャンセル',
-    save: '保存して開く',
-    cachePdf: 'PDFを端末にキャッシュ',
-    loading: '待機中...',
-  },
+const jaMessages = {
+  appName: 'RepoShelf',
+  tagline: 'あなたのプライベートリポジトリを、読みやすく。',
+  menu: 'メニュー',
+  search: '検索',
+  theme: 'テーマ切り替え',
+  connections: '接続先',
+  select: '接続先とファイルを選択してください。',
+  library: '接続先ライブラリ',
+  saved: '登録済み',
+  add: '追加',
+  close: '閉じる',
+  root: 'ルート',
+  last: '前回',
+  edit: '編集',
+  remove: '削除',
+  none: 'まだ接続先がありません。「追加」から最初のリポジトリを登録してください。',
+  fileHint: 'ファイル名やパスを入力して検索',
+  contentHint: '検索語を入力するとMarkdown本文を検索します',
+  currentHint: '現在のファイル内を検索',
+  file: 'ファイル',
+  content: '本文',
+  current: '現在',
+  clear: '検索をクリア',
+  addRepo: '接続先を追加',
+  editRepo: '接続先を編集',
+  displayName: '表示名',
+  repository: '対象リポジトリ',
+  rootPath: 'ルートパス（省略可）',
+  tokenRequired: 'Personal Access Token は必須です',
+  invalidRepo: 'owner/repo の形式で入力してください',
+  cancel: 'キャンセル',
+  save: '保存して開く',
+  cachePdf: 'PDFを端末にキャッシュ',
+  loading: '待機中...',
+} as const;
+
+type MessageKey = keyof typeof jaMessages;
+type Messages = Record<MessageKey, string>;
+type I18nContextValue = {
+  language: Language;
+  setLanguage: (language: Language) => void;
+  t: Messages;
+};
+
+const dictionary: Record<Language, Messages> = {
+  ja: jaMessages,
   en: {
     appName: 'RepoShelf',
     tagline: 'Your private repository, made readable.',
@@ -75,11 +86,11 @@ const dictionary = {
     cachePdf: 'Cache PDFs on this device',
     loading: 'Loading...',
   },
-} as const;
+};
 
-const Context = createContext({
-  language: 'ja' as Language,
-  setLanguage: (_: Language) => {},
+const Context = createContext<I18nContextValue>({
+  language: 'ja',
+  setLanguage: () => undefined,
   t: dictionary.ja,
 });
 export function I18nProvider({
