@@ -18,6 +18,7 @@ export class PdfZoomController {
         this.wheelDelta = 0;
         this.lastGestureScale = 1;
         this.boundHandleWheel = (event) => this.handleWheel(event);
+        this.boundHandleKeyDown = (event) => this.handleKeyDown(event);
         this.boundHandleGestureStart = (event) => this.handleGestureStart(event);
         this.boundHandleGestureChange = (event) => this.handleGestureChange(event);
         this.boundResetGestureScale = () => { this.lastGestureScale = 1; };
@@ -39,6 +40,7 @@ export class PdfZoomController {
             target.addEventListener('gesturechange', this.boundHandleGestureChange, blockingOptions);
             target.addEventListener('gestureend', this.boundResetGestureScale, { capture: true, passive: true });
         });
+        document.addEventListener('keydown', this.boundHandleKeyDown, blockingOptions);
     }
 
     /**
@@ -74,6 +76,28 @@ export class PdfZoomController {
         const direction = this.wheelDelta < 0 ? 1 : -1;
         this.wheelDelta = 0;
         this.changeZoom(direction * 10);
+    }
+
+    /**
+     * Convert browser zoom shortcuts into PDF viewer zoom while a PDF is open.
+     *
+     * @param {KeyboardEvent} event
+     */
+    handleKeyDown(event) {
+        if (!this.isPdfVisible()) return;
+        if (!event.ctrlKey && !event.metaKey) return;
+
+        if (['+', '=', '-'].includes(event.key)) {
+            this.cancelGestureEvent(event);
+            this.changeZoom(event.key === '-' ? -25 : 25);
+            return;
+        }
+
+        if (event.key === '0') {
+            this.cancelGestureEvent(event);
+            this.zoomState.current = 100;
+            this.updateZoomUI();
+        }
     }
 
     /**

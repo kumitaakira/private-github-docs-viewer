@@ -1,4 +1,4 @@
-import { fetchBlob, fetchContents, searchMarkdownCode } from '../../api/github.js';
+import { fetchBlob, searchMarkdownCode } from '../../api/github.js';
 import { getDomElements } from '../../core/dom.js';
 import { createMarkdownRenderer } from '../../markdown/renderer.js';
 import { MOBILE_MAX_BYTES, PdfBlobCache } from '../cache/pdfBlobCache.js';
@@ -259,7 +259,7 @@ async function openRepository(profile, { preserveUrl = false } = {}) {
     document.getElementById('workspace-view').classList.add('flex');
 
     treeRoot.innerHTML = '';
-    await loadTreeLevel(settings.path, treeRoot);
+    await loadFileTree();
     await openInitialFileIfAvailable();
     toggleSidebar(true);
     schedulePdfCachePrune();
@@ -618,39 +618,71 @@ document.getElementById('login-btn').addEventListener('click', async () => {
     await openRepository(profile);
 });
 
-async function loadTreeLevel(path, container) {
-    const cleanPath = path.replace(/^\/+|\/+$/g, '');
-    const loadingState = container === treeRoot ? loadingController.start() : null;
+async function loadFileTree() {
+    const loadingState = loadingController.start();
 
     try {
-        const data = await fetchContents(settings, cleanPath, { signal: loadingState?.controller.signal });
-        const items = Array.isArray(data) ? data : [data];
-
-        const folders = items.filter(i => i.type === 'dir').sort((a, b) => a.name.localeCompare(b.name));
-        const files = items.filter(i => i.type === 'file' && (i.name.toLowerCase().endsWith('.pdf') || i.name.toLowerCase().endsWith('.md'))).sort((a, b) => a.name.localeCompare(b.name));
-
-        renderTreeItems(folders, files, container);
+        const index = await repositoryIndex.load();
+        renderTreeFromFiles(index.files);
     } catch (error) {
-        if (loadingState?.cancelled || isAbortError(error)) return;
-        container.innerHTML = `<div class="text-red-500 dark:text-dracula-red p-2 text-xs">エラー (${error.message})</div>`;
+        if (loadingState.cancelled || isAbortError(error)) return;
+        treeRoot.innerHTML = `<div class="text-red-500 dark:text-dracula-red p-2 text-xs">エラー (${error.message})</div>`;
     } finally {
-        if (loadingState) loadingController.hide(loadingState);
+        loadingController.hide(loadingState);
     }
 }
 
-function renderTreeItems(folders, files, container) {
-    container.innerHTML = '';
-    const lastOpenedFile = lastOpenedFileStore.get(settings);
-    const ul = document.createElement('ul');
-    ul.className = container === treeRoot ? 'tree-list space-y-1' : 'tree-list nested space-y-1';
+function createTreeNode(name = '') {
+    return {
+        name,
+        folders: new Map(),
+        files: []
+    };
+}
 
-    if (folders.length === 0 && files.length === 0) {
+function buildTree(files) {
+    const root = createTreeNode();
+    const rootPath = normalizeRootPath(settings);
+    const rootPrefix = rootPath ? `${rootPath}/` : '';
+
+    files.forEach(file => {
+        const relativePath = rootPrefix && file.path.startsWith(rootPrefix)
+            ? file.path.slice(rootPrefix.length)
+            : file.path;
+        const parts = relativePath.split('/').filter(Boolean);
+        if (parts.length === 0) return;
+
+        let node = root;
+        parts.slice(0, -1).forEach(part => {
+            if (!node.folders.has(part)) node.folders.set(part, createTreeNode(part));
+            node = node.folders.get(part);
+        });
+        node.files.push(file);
+    });
+
+    return root;
+}
+
+function renderTreeFromFiles(files) {
+    treeRoot.innerHTML = '';
+    const lastOpenedFile = lastOpenedFileStore.get(settings);
+    const tree = buildTree(files);
+    const ul = renderTreeNode(tree, lastOpenedFile, true);
+    treeRoot.appendChild(ul);
+}
+
+function renderTreeNode(node, lastOpenedFile, isRoot = false) {
+    const ul = document.createElement('ul');
+    ul.className = isRoot ? 'tree-list space-y-1' : 'tree-list nested space-y-1';
+
+    if (node.folders.size === 0 && node.files.length === 0) {
         ul.innerHTML = '<li class="text-gray-400 dark:text-dracula-comment text-xs py-1">ファイルなし</li>';
-        container.appendChild(ul);
-        return;
+        return ul;
     }
 
-    folders.forEach(folder => {
+    Array.from(node.folders.values())
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(folder => {
         const li = document.createElement('li');
         const details = document.createElement('details');
         details.className = 'group';
@@ -677,19 +709,18 @@ function renderTreeItems(folders, files, container) {
         const childrenContainer = document.createElement('div');
         details.addEventListener('toggle', () => {
             folderIcon.textContent = details.open ? 'folder_open' : 'folder';
-            if (details.open && !details.dataset.loaded) {
-                details.dataset.loaded = 'true';
-                childrenContainer.innerHTML = '<div class="pl-4 py-1 text-gray-400 dark:text-dracula-comment text-xs animate-pulse">読込中...</div>';
-                loadTreeLevel(folder.path, childrenContainer);
-            }
         });
         details.appendChild(summary);
+        childrenContainer.appendChild(renderTreeNode(folder, lastOpenedFile));
         details.appendChild(childrenContainer);
         li.appendChild(details);
         ul.appendChild(li);
     });
 
-    files.forEach(file => {
+    node.files
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(file => {
         const isPdf = file.name.toLowerCase().endsWith('.pdf');
         const li = document.createElement('li');
         li.className = 'tree-row cursor-pointer text-blue-600 dark:text-dracula-cyan';
@@ -717,7 +748,7 @@ function renderTreeItems(folders, files, container) {
         });
         ul.appendChild(li);
     });
-    container.appendChild(ul);
+    return ul;
 }
 
 function decodeBase64UTF8(base64) {
@@ -809,8 +840,13 @@ async function loadMarkdown(fileSha, fileName, filePath = fileName) {
 function updateZoomUI() {
     zoomLevelText.textContent = `${zoomState.current}%`;
     const targetWidth = (getPdfBaseWidth() * (zoomState.current / 100));
-    pdfWrapper.style.maxWidth = `${targetWidth}px`;
-    pdfWrapper.style.width = `${zoomState.current}%`;
+    if (isDesktopLayout()) {
+        pdfWrapper.style.maxWidth = 'none';
+        pdfWrapper.style.width = `${targetWidth}px`;
+    } else {
+        pdfWrapper.style.maxWidth = `${targetWidth}px`;
+        pdfWrapper.style.width = `${zoomState.current}%`;
+    }
 }
 
 document.getElementById('zoom-in-btn').addEventListener('click', () => {

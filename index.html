@@ -698,16 +698,6 @@
                     <span class="material-symbols-outlined" id="theme-toggle-icon">dark_mode</span>
                 </button>
 
-                <div id="zoom-controls"
-                    class="hidden flex items-center space-x-1 bg-gray-100 dark:bg-dracula-bg rounded border border-gray-200 dark:border-dracula-current p-1 transition-colors">
-                    <button id="zoom-out-btn"
-                        class="text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg px-2 rounded transition-colors">-</button>
-                    <span id="zoom-level"
-                        class="text-xs text-gray-700 dark:text-dracula-fg w-10 text-center cursor-pointer font-mono">100%</span>
-                    <button id="zoom-in-btn"
-                        class="text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg px-2 rounded transition-colors">+</button>
-                </div>
-
                 <button id="logout-btn"
                     class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 dark:bg-dracula-bg dark:hover:bg-dracula-current dark:text-dracula-comment dark:hover:text-dracula-fg py-1.5 px-3 rounded border border-gray-200 dark:border-dracula-current transition-colors">接続先</button>
             </div>
@@ -747,6 +737,15 @@
 
             <div id="scroll-container" class="flex-grow overflow-auto w-full h-full relative"
                 style="-webkit-overflow-scrolling: touch;">
+                <div id="zoom-controls"
+                    class="hidden sticky top-3 z-20 mx-auto mt-3 w-fit items-center space-x-1 rounded border border-gray-200 bg-white/95 p-1 shadow-sm backdrop-blur transition-colors dark:border-dracula-current dark:bg-dracula-sidebar/95">
+                    <button id="zoom-out-btn"
+                        class="text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg px-2 rounded transition-colors">-</button>
+                    <span id="zoom-level"
+                        class="text-xs text-gray-700 dark:text-dracula-fg w-10 text-center cursor-pointer font-mono">100%</span>
+                    <button id="zoom-in-btn"
+                        class="text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-dracula-comment dark:hover:bg-dracula-current dark:hover:text-dracula-fg px-2 rounded transition-colors">+</button>
+                </div>
                 <div id="current-search-bar"
                     class="hidden sticky top-0 z-10 bg-white/95 dark:bg-dracula-sidebar/95 backdrop-blur border-b border-gray-200 dark:border-dracula-current px-3 py-2 transition-colors">
                     <div class="max-w-4xl mx-auto flex items-center gap-2">
