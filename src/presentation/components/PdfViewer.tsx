@@ -1,8 +1,12 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+const MIN_ZOOM = 50;
+const MAX_ZOOM = 300;
+const DESKTOP_BASE_WIDTH = 600;
 
 type PdfViewerProps = {
   bytes: Uint8Array;
@@ -50,6 +54,11 @@ export function PdfViewer({ bytes }: PdfViewerProps) {
   const [pdf, setPdf] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [zoom, setZoom] = useState(100);
   const data = useMemo(() => bytes.slice(), [bytes]);
+  const wheelDeltaRef = useRef(0);
+
+  const changeZoom = useCallback((delta: number) => {
+    setZoom((value) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value + delta)));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,16 +75,63 @@ export function PdfViewer({ bytes }: PdfViewerProps) {
     };
   }, [data]);
 
+  useEffect(() => {
+    function cancelBrowserZoom(event: WheelEvent) {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      wheelDeltaRef.current += event.deltaY;
+      if (Math.abs(wheelDeltaRef.current) < 8) return;
+
+      changeZoom(wheelDeltaRef.current < 0 ? 10 : -10);
+      wheelDeltaRef.current = 0;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!event.ctrlKey && !event.metaKey) return;
+      if (!['+', '=', '-', '0'].includes(event.key)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.key === '0') setZoom(100);
+      else changeZoom(event.key === '-' ? -25 : 25);
+    }
+
+    function cancelGesture(event: Event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const options = { capture: true, passive: false } as AddEventListenerOptions;
+    window.addEventListener('wheel', cancelBrowserZoom, options);
+    document.addEventListener('wheel', cancelBrowserZoom, options);
+    document.addEventListener('keydown', handleKeyDown, options);
+    document.addEventListener('gesturestart', cancelGesture, options);
+    document.addEventListener('gesturechange', cancelGesture, options);
+
+    return () => {
+      window.removeEventListener('wheel', cancelBrowserZoom, options);
+      document.removeEventListener('wheel', cancelBrowserZoom, options);
+      document.removeEventListener('keydown', handleKeyDown, options);
+      document.removeEventListener('gesturestart', cancelGesture, options);
+      document.removeEventListener('gesturechange', cancelGesture, options);
+    };
+  }, [changeZoom]);
+
   if (!pdf) {
     return <div className="p-6 text-sm text-gray-500 dark:text-dracula-comment">PDFを準備しています...</div>;
   }
 
+  const desktopWidth = Math.round(DESKTOP_BASE_WIDTH * (zoom / 100));
+
   return (
-    <div className="mx-auto w-full max-w-[600px] space-y-3 py-4" style={{ width: `${zoom}%` }}>
-      <div className="sticky top-2 z-10 mx-auto flex w-fit items-center gap-1 rounded border border-gray-200 bg-white/90 p-1 text-sm shadow-sm backdrop-blur dark:border-dracula-current dark:bg-dracula-sidebar/90">
+    <div className="pdf-viewer mx-auto flex min-h-full w-full flex-col items-center space-y-3 overflow-x-auto px-3 py-4">
+      <div className="sticky top-3 z-10 mx-auto flex w-fit items-center gap-1 rounded border border-gray-200 bg-white/90 p-1 text-sm shadow-sm backdrop-blur dark:border-dracula-current dark:bg-dracula-sidebar/90">
         <button
           className="rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-dracula-current"
-          onClick={() => setZoom((value) => Math.max(50, value - 25))}
+          onClick={() => changeZoom(-25)}
           type="button"
         >
           -
@@ -89,15 +145,25 @@ export function PdfViewer({ bytes }: PdfViewerProps) {
         </button>
         <button
           className="rounded px-2 py-1 hover:bg-gray-100 dark:hover:bg-dracula-current"
-          onClick={() => setZoom((value) => Math.min(300, value + 25))}
+          onClick={() => changeZoom(25)}
           type="button"
         >
           +
         </button>
       </div>
-      {Array.from({ length: pdf.numPages }, (_, index) => (
-        <PdfPage key={index + 1} pageNumber={index + 1} pdf={pdf} zoom={zoom} />
-      ))}
+      <div
+        className="pdf-pages space-y-3"
+        style={
+          {
+            '--pdf-desktop-width': `${desktopWidth}px`,
+            '--pdf-mobile-width': `${zoom}%`,
+          } as CSSProperties
+        }
+      >
+        {Array.from({ length: pdf.numPages }, (_, index) => (
+          <PdfPage key={index + 1} pageNumber={index + 1} pdf={pdf} zoom={zoom} />
+        ))}
+      </div>
     </div>
   );
 }
