@@ -17,11 +17,17 @@ export class PdfZoomController {
         this.maxZoom = maxZoom;
         this.wheelDelta = 0;
         this.lastGestureScale = 1;
+        this.gestureAnchor = null;
+        this.touchGesture = null;
+        this.nativeGestureActive = false;
         this.boundHandleWheel = (event) => this.handleWheel(event);
         this.boundHandleKeyDown = (event) => this.handleKeyDown(event);
         this.boundHandleGestureStart = (event) => this.handleGestureStart(event);
         this.boundHandleGestureChange = (event) => this.handleGestureChange(event);
-        this.boundResetGestureScale = () => { this.lastGestureScale = 1; };
+        this.boundResetGestureScale = () => this.resetGesture();
+        this.boundHandleTouchStart = (event) => this.handleTouchStart(event);
+        this.boundHandleTouchMove = (event) => this.handleTouchMove(event);
+        this.boundHandleTouchEnd = (event) => this.handleTouchEnd(event);
     }
 
     /**
@@ -40,6 +46,10 @@ export class PdfZoomController {
             target.addEventListener('gesturechange', this.boundHandleGestureChange, blockingOptions);
             target.addEventListener('gestureend', this.boundResetGestureScale, { capture: true, passive: true });
         });
+        this.scrollContainer.addEventListener('touchstart', this.boundHandleTouchStart, blockingOptions);
+        this.scrollContainer.addEventListener('touchmove', this.boundHandleTouchMove, blockingOptions);
+        this.scrollContainer.addEventListener('touchend', this.boundHandleTouchEnd, blockingOptions);
+        this.scrollContainer.addEventListener('touchcancel', this.boundHandleTouchEnd, blockingOptions);
         document.addEventListener('keydown', this.boundHandleKeyDown, blockingOptions);
     }
 
@@ -75,7 +85,7 @@ export class PdfZoomController {
 
         const direction = this.wheelDelta < 0 ? 1 : -1;
         this.wheelDelta = 0;
-        this.changeZoom(direction * 10);
+        this.changeZoom(direction * 10, this.getEventPoint(event));
     }
 
     /**
@@ -95,8 +105,7 @@ export class PdfZoomController {
 
         if (event.key === '0') {
             this.cancelGestureEvent(event);
-            this.zoomState.current = 100;
-            this.updateZoomUI();
+            this.setZoom(100);
         }
     }
 
@@ -108,7 +117,11 @@ export class PdfZoomController {
     handleGestureStart(event) {
         if (!this.isPdfVisible()) return;
         this.cancelGestureEvent(event);
+        this.nativeGestureActive = true;
+        this.touchGesture = null;
         this.lastGestureScale = 1;
+        const point = this.getEventPoint(event);
+        this.gestureAnchor = this.captureZoomAnchor(point);
     }
 
     /**
@@ -125,7 +138,144 @@ export class PdfZoomController {
         if (Math.abs(scaleDiff) < 0.08) return;
 
         this.lastGestureScale = scale;
-        this.changeZoom(scaleDiff > 0 ? 10 : -10);
+        this.changeZoom(scaleDiff > 0 ? 10 : -10, this.getEventPoint(event), this.gestureAnchor);
+    }
+
+    /**
+     * Start a native two-finger pinch. Safari emits gesture* events, while
+     * Chromium on mobile exposes the same interaction through touch events.
+     *
+     * @param {TouchEvent} event
+     */
+    handleTouchStart(event) {
+        if (this.nativeGestureActive || !this.isPdfVisible() || event.touches.length !== 2) return;
+        this.cancelGestureEvent(event);
+
+        const point = this.getTouchCenter(event.touches);
+        this.touchGesture = {
+            initialDistance: this.getTouchDistance(event.touches),
+            initialZoom: this.zoomState.current,
+            anchor: this.captureZoomAnchor(point)
+        };
+    }
+
+    /**
+     * Zoom around the midpoint of the two fingers. Keeping the anchor captured
+     * at touchstart also makes translating both fingers pan the document.
+     *
+     * @param {TouchEvent} event
+     */
+    handleTouchMove(event) {
+        if (this.nativeGestureActive || !this.touchGesture || event.touches.length !== 2) return;
+        this.cancelGestureEvent(event);
+
+        const distance = this.getTouchDistance(event.touches);
+        if (!this.touchGesture.initialDistance || !distance) return;
+
+        const nextZoom = Math.round(
+            this.touchGesture.initialZoom * (distance / this.touchGesture.initialDistance)
+        );
+        this.setZoom(nextZoom, this.getTouchCenter(event.touches), this.touchGesture.anchor);
+    }
+
+    /**
+     * @param {TouchEvent} event
+     */
+    handleTouchEnd(event) {
+        if (!this.touchGesture) return;
+        if (event.touches.length < 2) this.touchGesture = null;
+    }
+
+    resetGesture() {
+        this.lastGestureScale = 1;
+        this.gestureAnchor = null;
+        this.nativeGestureActive = false;
+    }
+
+    /**
+     * @param {Event & { clientX?: number, clientY?: number }} event
+     * @returns {{ clientX: number, clientY: number }}
+     */
+    getEventPoint(event) {
+        if (Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+            const rect = this.scrollContainer.getBoundingClientRect();
+            const isInsideViewer = event.clientX >= rect.left
+                && event.clientX <= rect.left + rect.width
+                && event.clientY >= rect.top
+                && event.clientY <= rect.top + rect.height;
+            if (isInsideViewer) {
+                return { clientX: event.clientX, clientY: event.clientY };
+            }
+        }
+        return this.getViewportCenter();
+    }
+
+    /**
+     * @param {TouchList} touches
+     * @returns {{ clientX: number, clientY: number }}
+     */
+    getTouchCenter(touches) {
+        return {
+            clientX: (touches[0].clientX + touches[1].clientX) / 2,
+            clientY: (touches[0].clientY + touches[1].clientY) / 2
+        };
+    }
+
+    /**
+     * @param {TouchList} touches
+     * @returns {number}
+     */
+    getTouchDistance(touches) {
+        return Math.hypot(
+            touches[1].clientX - touches[0].clientX,
+            touches[1].clientY - touches[0].clientY
+        );
+    }
+
+    /**
+     * @returns {{ clientX: number, clientY: number }}
+     */
+    getViewportCenter() {
+        const rect = this.scrollContainer.getBoundingClientRect();
+        return {
+            clientX: rect.left + (rect.width / 2),
+            clientY: rect.top + (rect.height / 2)
+        };
+    }
+
+    /**
+     * Store a PDF-local point so it can be put back under the cursor after the
+     * wrapper changes size. A page is preferred over the whole wrapper because
+     * fixed page gaps and padding do not scale with the PDF.
+     *
+     * @param {{ clientX: number, clientY: number }} point
+     * @returns {{ element: HTMLElement, xRatio: number, yRatio: number }}
+     */
+    captureZoomAnchor(point) {
+        const hit = document.elementFromPoint?.(point.clientX, point.clientY);
+        const page = hit?.closest?.('[data-page]');
+        const element = page && this.pdfWrapper.contains(page) ? page : this.pdfWrapper;
+        const rect = element.getBoundingClientRect();
+
+        return {
+            element,
+            xRatio: rect.width ? (point.clientX - rect.left) / rect.width : 0.5,
+            yRatio: rect.height ? (point.clientY - rect.top) / rect.height : 0.5
+        };
+    }
+
+    /**
+     * @param {{ element: HTMLElement, xRatio: number, yRatio: number }} anchor
+     * @param {{ clientX: number, clientY: number }} point
+     */
+    restoreZoomAnchor(anchor, point) {
+        if (!anchor?.element?.isConnected) return;
+        const rect = anchor.element.getBoundingClientRect();
+        const anchoredX = rect.left + (rect.width * anchor.xRatio);
+        const anchoredY = rect.top + (rect.height * anchor.yRatio);
+
+        this.scrollContainer.scrollLeft += anchoredX - point.clientX;
+        this.scrollContainer.scrollTop += anchoredY - point.clientY;
     }
 
     /**
@@ -140,10 +290,25 @@ export class PdfZoomController {
     /**
      * @param {number} delta
      */
-    changeZoom(delta) {
-        const nextZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoomState.current + delta));
-        if (nextZoom === this.zoomState.current) return;
+    changeZoom(delta, point = this.getViewportCenter(), anchor = null) {
+        this.setZoom(this.zoomState.current + delta, point, anchor);
+    }
+
+    /**
+     * @param {number} requestedZoom
+     * @param {{ clientX: number, clientY: number }} [point]
+     * @param {{ element: HTMLElement, xRatio: number, yRatio: number }} [anchor]
+     */
+    setZoom(requestedZoom, point = this.getViewportCenter(), anchor = null) {
+        const nextZoom = Math.max(this.minZoom, Math.min(this.maxZoom, requestedZoom));
+        const zoomAnchor = anchor || this.captureZoomAnchor(point);
+        if (nextZoom === this.zoomState.current) {
+            if (anchor) this.restoreZoomAnchor(zoomAnchor, point);
+            return;
+        }
+
         this.zoomState.current = nextZoom;
         this.updateZoomUI();
+        this.restoreZoomAnchor(zoomAnchor, point);
     }
 }

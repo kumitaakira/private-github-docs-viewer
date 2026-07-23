@@ -850,12 +850,12 @@ function updateZoomUI() {
 }
 
 document.getElementById('zoom-in-btn').addEventListener('click', () => {
-    if (zoomState.current < 300) { zoomState.current += 25; updateZoomUI(); }
+    pdfZoomController.changeZoom(25);
 });
 document.getElementById('zoom-out-btn').addEventListener('click', () => {
-    if (zoomState.current > 50) { zoomState.current -= 25; updateZoomUI(); }
+    pdfZoomController.changeZoom(-25);
 });
-zoomLevelText.addEventListener('click', () => { zoomState.current = 100; updateZoomUI(); });
+zoomLevelText.addEventListener('click', () => pdfZoomController.setZoom(100));
 
 async function loadPdfContinuous(fileSha, fileName, filePath = fileName) {
     const loadingState = loadingController.start();
