@@ -73,7 +73,7 @@ export class CurrentFileSearchController {
         const walker = document.createTreeWalker(this.mdWrapper, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {
                 if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-                if (node.parentElement.closest('script, style, mark')) return NodeFilter.FILTER_REJECT;
+                if (node.parentElement.closest('script, style, mark, [data-mermaid-diagram]')) return NodeFilter.FILTER_REJECT;
                 matcher.lastIndex = 0;
                 return matcher.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
             }

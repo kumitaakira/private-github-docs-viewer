@@ -18,6 +18,31 @@ export function createMarkdownRenderer() {
         }
     }).use(window.texmath, { engine: window.katex, delimiters: 'dollars' });
 
+    const defaultFence = md.renderer.rules.fence.bind(md.renderer.rules);
+    md.renderer.rules.fence = (tokens, index, options, env, self) => {
+        const language = tokens[index].info.trim().split(/\s+/)[0].toLowerCase();
+        if (language !== 'mermaid') return defaultFence(tokens, index, options, env, self);
+
+        const source = md.utils.escapeHtml(tokens[index].content.trim());
+        return `<figure class="mermaid-diagram" data-mermaid-diagram>`
+            + `<div class="mermaid-stage" role="button" tabindex="0" title="クリックで拡大" aria-label="Mermaid図を拡大表示"></div>`
+            + `<span class="mermaid-zoom-hint material-symbols-outlined" aria-hidden="true">zoom_out_map</span>`
+            + `<pre class="mermaid-source"><code>${source}</code></pre>`
+            + `<figcaption class="mermaid-status" role="status"></figcaption>`
+            + `</figure>`;
+    };
+
+    md.renderer.rules.table_open = () => '<div class="markdown-table-scroll"><table>\n';
+    md.renderer.rules.table_close = () => '</table></div>\n';
+    md.renderer.rules.th_open = (tokens, index, options, env, self) => (
+        `<th${self.renderAttrs(tokens[index])}><div class="markdown-table-cell">`
+    );
+    md.renderer.rules.th_close = () => '</div></th>';
+    md.renderer.rules.td_open = (tokens, index, options, env, self) => (
+        `<td${self.renderAttrs(tokens[index])}><div class="markdown-table-cell">`
+    );
+    md.renderer.rules.td_close = () => '</div></td>';
+
     md.core.ruler.after('inline', 'github_task_lists', (state) => {
         const tokens = state.tokens;
         for (let i = 2; i < tokens.length; i++) {

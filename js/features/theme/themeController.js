@@ -1,11 +1,12 @@
 export class ThemeController {
     /**
-     * @param {{ themeToggleIcon: HTMLElement, mdStyle: HTMLLinkElement, hlStyle: HTMLLinkElement }} options
+     * @param {{ themeToggleIcon: HTMLElement, mdStyle: HTMLLinkElement, hlStyle: HTMLLinkElement, onChange?: (isDark: boolean) => void }} options
      */
-    constructor({ themeToggleIcon, mdStyle, hlStyle }) {
+    constructor({ themeToggleIcon, mdStyle, hlStyle, onChange = () => {} }) {
         this.themeToggleIcon = themeToggleIcon;
         this.mdStyle = mdStyle;
         this.hlStyle = hlStyle;
+        this.onChange = onChange;
     }
 
     /**
@@ -18,7 +19,7 @@ export class ThemeController {
             document.documentElement.classList.add('dark');
             this.themeToggleIcon.textContent = 'light_mode';
             this.mdStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-dark.min.css';
-            this.hlStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dracula.min.css';
+            this.hlStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css';
             localStorage.setItem('theme_preference', 'dark');
         } else {
             document.documentElement.classList.remove('dark');
@@ -27,6 +28,9 @@ export class ThemeController {
             this.hlStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
             localStorage.setItem('theme_preference', 'light');
         }
+        const themeColor = document.querySelector('meta[name="theme-color"]');
+        if (themeColor) themeColor.content = isDark ? '#0e1116' : '#faf7f0';
+        this.onChange(isDark);
     }
 
     /**

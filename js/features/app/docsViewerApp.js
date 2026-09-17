@@ -1,6 +1,7 @@
 import { fetchBlob, searchMarkdownCode } from '../../api/github.js';
 import { getDomElements } from '../../core/dom.js';
 import { createMarkdownRenderer } from '../../markdown/renderer.js';
+import { renderMermaidDiagrams } from '../../markdown/mermaidRenderer.js';
 import { MOBILE_MAX_BYTES, PdfBlobCache } from '../cache/pdfBlobCache.js';
 import { LoadingController, isAbortError } from '../loading/loadingController.js';
 import { SidebarController } from '../navigation/sidebarController.js';
@@ -74,7 +75,12 @@ const {
 } = getDomElements();
 const loadingController = new LoadingController({ overlay: loading });
 const sidebarController = new SidebarController({ sidebar, overlay: sidebarOverlay });
-const themeController = new ThemeController({ themeToggleIcon, mdStyle, hlStyle });
+const themeController = new ThemeController({
+    themeToggleIcon,
+    mdStyle,
+    hlStyle,
+    onChange: () => { renderMermaidDiagrams(mdWrapper); }
+});
 const lastOpenedFileStore = new LastOpenedFileStore(LAST_FILE_KEY);
 const repositoryIndex = new RepositoryIndex(() => settings);
 const pdfBlobCache = new PdfBlobCache({ isMobile: () => !isDesktopLayout() });
@@ -823,6 +829,7 @@ async function loadMarkdown(fileSha, fileName, filePath = fileName) {
 
         mdWrapper.innerHTML = cleanHtml;
         mdWrapper.classList.remove('hidden');
+        await renderMermaidDiagrams(mdWrapper);
         if (currentSearchInput.value.trim()) currentFileSearch.run();
 
     } catch (error) {
