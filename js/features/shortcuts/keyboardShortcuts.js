@@ -2,7 +2,7 @@
  * Register global keyboard shortcuts for navigation, search, theme, zoom, and cancel.
  *
  * @param {Object} options
- * @param {(isDark: boolean) => void} options.applyTheme
+ * @param {() => void} options.cycleTheme
  * @param {() => void} options.closeShortcuts
  * @param {(mode?: string) => void} options.focusSearch
  * @param {(target: EventTarget | null) => boolean} options.isEditableTarget
@@ -15,7 +15,7 @@
  * @param {{ current: number }} options.zoomState
  */
 export function setupKeyboardShortcuts({
-    applyTheme,
+    cycleTheme,
     closeShortcuts,
     focusSearch,
     isEditableTarget,
@@ -52,7 +52,7 @@ export function setupKeyboardShortcuts({
         }
         if (commandKey && event.shiftKey && event.key.toLowerCase() === 'l') {
             event.preventDefault();
-            applyTheme(!document.documentElement.classList.contains('dark'));
+            cycleTheme();
             return;
         }
         if (commandKey && (event.key === '+' || event.key === '=')) {

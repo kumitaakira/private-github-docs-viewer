@@ -43,8 +43,7 @@ const {
     zoomLevelText,
     sidebar,
     sidebarOverlay,
-    themeToggleBtn,
-    themeToggleIcon,
+    themeSelect,
     mdStyle,
     hlStyle,
     searchInput,
@@ -76,7 +75,7 @@ const {
 const loadingController = new LoadingController({ overlay: loading });
 const sidebarController = new SidebarController({ sidebar, overlay: sidebarOverlay });
 const themeController = new ThemeController({
-    themeToggleIcon,
+    themeSelect,
     mdStyle,
     hlStyle,
     onChange: () => { renderMermaidDiagrams(mdWrapper); }
@@ -107,7 +106,7 @@ const pdfZoomController = new PdfZoomController({
 themeController.applySavedTheme();
 pdfZoomController.attach();
 
-themeToggleBtn.addEventListener('click', () => themeController.toggle());
+themeSelect.addEventListener('change', () => themeController.apply(themeSelect.value));
 
 const toggleSidebar = (forceState) => sidebarController.toggle(forceState);
 const handleFileClick = () => sidebarController.closeOnMobile();
@@ -566,7 +565,7 @@ function toggleShortcuts(forceState) {
 }
 
 setupKeyboardShortcuts({
-    applyTheme: (isDark) => themeController.apply(isDark),
+    cycleTheme: () => themeController.cycle(),
     closeShortcuts: () => toggleShortcuts(false),
     focusSearch,
     isEditableTarget,

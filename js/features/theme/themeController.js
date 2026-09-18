@@ -1,50 +1,77 @@
+const THEMES = {
+    aurora: {
+        isDark: true,
+        themeColor: '#0e1116',
+        highlightStyle: 'github-dark'
+    },
+    midnight: {
+        isDark: true,
+        themeColor: '#090f1d',
+        highlightStyle: 'atom-one-dark'
+    },
+    paper: {
+        isDark: false,
+        themeColor: '#faf7f0',
+        highlightStyle: 'github'
+    },
+    mist: {
+        isDark: false,
+        themeColor: '#f1f5f7',
+        highlightStyle: 'atom-one-light'
+    }
+};
+
+const THEME_ORDER = Object.keys(THEMES);
+
 export class ThemeController {
     /**
-     * @param {{ themeToggleIcon: HTMLElement, mdStyle: HTMLLinkElement, hlStyle: HTMLLinkElement, onChange?: (isDark: boolean) => void }} options
+     * @param {{ themeSelect: HTMLSelectElement, mdStyle: HTMLLinkElement, hlStyle: HTMLLinkElement, onChange?: (theme: { id: string, isDark: boolean }) => void }} options
      */
-    constructor({ themeToggleIcon, mdStyle, hlStyle, onChange = () => {} }) {
-        this.themeToggleIcon = themeToggleIcon;
+    constructor({ themeSelect, mdStyle, hlStyle, onChange = () => {} }) {
+        this.themeSelect = themeSelect;
         this.mdStyle = mdStyle;
         this.hlStyle = hlStyle;
         this.onChange = onChange;
+        this.currentTheme = 'aurora';
     }
 
     /**
-     * Apply light or dark mode and sync dependent stylesheet URLs.
+     * Apply a named theme and sync dependent syntax/Markdown stylesheets.
      *
-     * @param {boolean} isDark
+     * @param {string} themeId
      */
-    apply(isDark) {
-        if (isDark) {
-            document.documentElement.classList.add('dark');
-            this.themeToggleIcon.textContent = 'light_mode';
-            this.mdStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-dark.min.css';
-            this.hlStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css';
-            localStorage.setItem('theme_preference', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            this.themeToggleIcon.textContent = 'dark_mode';
-            this.mdStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-light.min.css';
-            this.hlStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
-            localStorage.setItem('theme_preference', 'light');
-        }
+    apply(themeId) {
+        const normalizedId = THEMES[themeId] ? themeId : 'aurora';
+        const theme = THEMES[normalizedId];
+        const root = document.documentElement;
+
+        root.dataset.theme = normalizedId;
+        root.classList.toggle('dark', theme.isDark);
+        this.themeSelect.value = normalizedId;
+        this.mdStyle.href = `https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-${theme.isDark ? 'dark' : 'light'}.min.css`;
+        this.hlStyle.href = `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/${theme.highlightStyle}.min.css`;
+        localStorage.setItem('theme_preference', normalizedId);
+        this.currentTheme = normalizedId;
+
         const themeColor = document.querySelector('meta[name="theme-color"]');
-        if (themeColor) themeColor.content = isDark ? '#0e1116' : '#faf7f0';
-        this.onChange(isDark);
+        if (themeColor) themeColor.content = theme.themeColor;
+        this.onChange({ id: normalizedId, isDark: theme.isDark });
     }
 
     /**
-     * Apply the saved theme preference, defaulting to dark.
+     * Apply the saved theme, including migration from the former light/dark values.
      */
     applySavedTheme() {
-        const savedTheme = localStorage.getItem('theme_preference') || 'dark';
-        this.apply(savedTheme === 'dark');
+        const savedTheme = localStorage.getItem('theme_preference') || 'aurora';
+        const migratedTheme = savedTheme === 'dark' ? 'aurora' : savedTheme === 'light' ? 'paper' : savedTheme;
+        this.apply(migratedTheme);
     }
 
     /**
-     * Toggle between light and dark mode.
+     * Move to the next theme. Used by the keyboard shortcut.
      */
-    toggle() {
-        this.apply(!document.documentElement.classList.contains('dark'));
+    cycle() {
+        const currentIndex = THEME_ORDER.indexOf(this.currentTheme);
+        this.apply(THEME_ORDER[(currentIndex + 1) % THEME_ORDER.length]);
     }
 }

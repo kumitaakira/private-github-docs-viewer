@@ -119,14 +119,16 @@ function openMermaidLightbox(svg) {
     const overlay = ensureLightbox();
     overlay.querySelector('.mermaid-lightbox-content').innerHTML = svg;
     overlay.hidden = false;
-    document.body.style.overflow = 'hidden';
+    document.documentElement.classList.add('mermaid-lightbox-open');
+    document.body.classList.add('mermaid-lightbox-open');
 }
 
 export function closeMermaidLightbox() {
     if (!lightbox) return;
     lightbox.hidden = true;
     lightbox.querySelector('.mermaid-lightbox-content').replaceChildren();
-    document.body.style.overflow = '';
+    document.documentElement.classList.remove('mermaid-lightbox-open');
+    document.body.classList.remove('mermaid-lightbox-open');
 }
 
 document.addEventListener('keydown', (event) => {
