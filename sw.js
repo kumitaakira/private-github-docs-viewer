@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'private-docs-static-v1';
+const STATIC_CACHE = 'private-docs-static-v2';
 const CACHEABLE_HOSTS = new Set([
     self.location.host,
     'cdn.tailwindcss.com',
@@ -7,6 +7,10 @@ const CACHEABLE_HOSTS = new Set([
     'fonts.googleapis.com',
     'fonts.gstatic.com'
 ]);
+
+self.addEventListener('install', () => {
+    self.skipWaiting();
+});
 
 self.addEventListener('activate', event => {
     event.waitUntil(

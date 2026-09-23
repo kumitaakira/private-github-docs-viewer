@@ -13,6 +13,7 @@ import { CurrentFileSearchController } from '../search/currentFileSearch.js';
 import { setupKeyboardShortcuts } from '../shortcuts/keyboardShortcuts.js';
 import { LastOpenedFileStore } from '../storage/lastOpenedFile.js';
 import { RepositoryProfileStore } from '../storage/repositoryProfiles.js';
+import { ScrollPositionStore } from '../storage/scrollPositions.js';
 import { ThemeController } from '../theme/themeController.js';
 import { PdfZoomController } from '../zoom/pdfZoomController.js';
 
@@ -33,6 +34,7 @@ const BASE_MAX_WIDTH = 800;
 const DESKTOP_PDF_BASE_SCALE = 0.75;
 const LAST_FILE_KEY = 'github_docs_last_opened_file';
 const PDF_CACHE_SETTING_KEY = 'github_cache_pdf_blobs';
+const SCROLL_POSITIONS_KEY = 'github_docs_scroll_positions_v1';
 
 const {
     treeRoot,
@@ -82,6 +84,7 @@ const themeController = new ThemeController({
     onChange: () => { renderMermaidDiagrams(mdWrapper); }
 });
 const lastOpenedFileStore = new LastOpenedFileStore(LAST_FILE_KEY);
+const scrollPositionStore = new ScrollPositionStore(SCROLL_POSITIONS_KEY);
 const repositoryIndex = new RepositoryIndex(() => settings);
 const pdfBlobCache = new PdfBlobCache({ isMobile: () => !isDesktopLayout() });
 const markdownTextCache = new MarkdownTextCache({ isMobile: () => !isDesktopLayout() });
@@ -248,6 +251,8 @@ function hideRepositoryLibrary() {
 }
 
 async function openRepository(profile, { preserveUrl = false } = {}) {
+    saveCurrentScrollPosition();
+    currentFile = null;
     applySettings(profile);
     repositoryProfileStore.setActiveId(profile.id);
     renderRepositoryProfiles();
@@ -268,7 +273,7 @@ async function openRepository(profile, { preserveUrl = false } = {}) {
     treeRoot.innerHTML = '';
     await loadFileTree();
     await openInitialFileIfAvailable();
-    toggleSidebar(true);
+    toggleSidebar(isDesktopLayout());
     schedulePdfCachePrune();
 }
 
@@ -906,6 +911,7 @@ async function loadMarkdown(fileSha, fileName, filePath = fileName) {
         mdWrapper.innerHTML = cleanHtml;
         mdWrapper.classList.remove('hidden');
         await renderMermaidDiagrams(mdWrapper);
+        restoreCurrentScrollPosition();
         if (currentSearchInput.value.trim()) currentFileSearch.run();
 
     } catch (error) {
@@ -956,6 +962,7 @@ async function loadPdfContinuous(fileSha, fileName, filePath = fileName) {
 
         pdfWrapper.classList.remove('hidden');
         await setupContinuousScroll();
+        restoreCurrentScrollPosition();
         if (currentSearchInput.value.trim()) currentFileSearch.run();
     } catch (error) {
         if (loadingState.cancelled || isAbortError(error)) {
@@ -1026,6 +1033,7 @@ async function renderSinglePage(pageNum, wrapperNode) {
 }
 
 function resetViewerState(fileName, type) {
+    saveCurrentScrollPosition();
     document.getElementById('header-title').textContent = fileName;
     emptyState.classList.add('hidden');
     pdfWrapper.classList.add('hidden');
@@ -1047,6 +1055,26 @@ function resetViewerState(fileName, type) {
     mdWrapper.innerHTML = '';
     scrollContainer.scrollTop = 0;
 }
+
+function saveCurrentScrollPosition() {
+    if (!currentFile) return;
+    scrollPositionStore.save(settings, currentFile, scrollContainer.scrollTop);
+}
+
+function restoreCurrentScrollPosition() {
+    if (!currentFile) return;
+    const top = scrollPositionStore.get(settings, currentFile);
+    window.requestAnimationFrame(() => {
+        scrollContainer.scrollTo({ top, behavior: 'auto' });
+    });
+}
+
+let scrollSaveTimer = null;
+scrollContainer.addEventListener('scroll', () => {
+    window.clearTimeout(scrollSaveTimer);
+    scrollSaveTimer = window.setTimeout(saveCurrentScrollPosition, 200);
+}, { passive: true });
+window.addEventListener('pagehide', saveCurrentScrollPosition);
 
 window.addEventListener('resize', () => {
     if (!pdfWrapper.classList.contains('hidden')) updateZoomUI();
