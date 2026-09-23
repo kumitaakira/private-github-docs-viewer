@@ -16,7 +16,24 @@ export function createMarkdownRenderer() {
             }
             return '';
         }
-    }).use(window.texmath, { engine: window.katex, delimiters: 'dollars' });
+    });
+
+    md.core.ruler.push('repository_heading_ids', (state) => {
+        const slugCounts = new Map();
+        state.tokens.forEach((token, index) => {
+            if (token.type !== 'heading_open') return;
+            const text = state.tokens[index + 1]?.content || '';
+            const baseSlug = text
+                .toLocaleLowerCase()
+                .trim()
+                .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+                .replace(/[\s_]+/g, '-')
+                .replace(/^-+|-+$/g, '') || 'section';
+            const count = slugCounts.get(baseSlug) || 0;
+            slugCounts.set(baseSlug, count + 1);
+            token.attrSet('id', count ? `${baseSlug}-${count}` : baseSlug);
+        });
+    });
 
     const defaultFence = md.renderer.rules.fence.bind(md.renderer.rules);
     md.renderer.rules.fence = (tokens, index, options, env, self) => {
@@ -63,4 +80,13 @@ export function createMarkdownRenderer() {
     });
 
     return md;
+}
+
+/**
+ * Enable TeX parsing after KaTeX and markdown-it-texmath have been loaded.
+ */
+export function enableMathRendering(md) {
+    if (md.__mathRenderingEnabled || !window.texmath || !window.katex) return;
+    md.use(window.texmath, { engine: window.katex, delimiters: 'dollars' });
+    md.__mathRenderingEnabled = true;
 }

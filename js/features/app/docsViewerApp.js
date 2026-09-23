@@ -1,7 +1,10 @@
 import { fetchBlob, searchMarkdownCode } from '../../api/github.js';
+import { containsMathSyntax, ensureMathDependencies, ensurePdfJs } from '../../core/dependencyLoader.js';
 import { getDomElements } from '../../core/dom.js';
-import { createMarkdownRenderer } from '../../markdown/renderer.js';
+import { createMarkdownRenderer, enableMathRendering } from '../../markdown/renderer.js';
 import { renderMermaidDiagrams } from '../../markdown/mermaidRenderer.js';
+import { resolveRepositoryDocumentLink } from '../../markdown/repositoryLinks.js';
+import { MarkdownTextCache } from '../cache/markdownTextCache.js';
 import { MOBILE_MAX_BYTES, PdfBlobCache } from '../cache/pdfBlobCache.js';
 import { LoadingController, isAbortError } from '../loading/loadingController.js';
 import { SidebarController } from '../navigation/sidebarController.js';
@@ -12,8 +15,6 @@ import { LastOpenedFileStore } from '../storage/lastOpenedFile.js';
 import { RepositoryProfileStore } from '../storage/repositoryProfiles.js';
 import { ThemeController } from '../theme/themeController.js';
 import { PdfZoomController } from '../zoom/pdfZoomController.js';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const md = createMarkdownRenderer();
 const repositoryProfileStore = new RepositoryProfileStore();
@@ -83,6 +84,7 @@ const themeController = new ThemeController({
 const lastOpenedFileStore = new LastOpenedFileStore(LAST_FILE_KEY);
 const repositoryIndex = new RepositoryIndex(() => settings);
 const pdfBlobCache = new PdfBlobCache({ isMobile: () => !isDesktopLayout() });
+const markdownTextCache = new MarkdownTextCache({ isMobile: () => !isDesktopLayout() });
 const currentFileSearch = new CurrentFileSearchController({
     mdWrapper,
     pdfWrapper,
@@ -313,6 +315,47 @@ async function openFile(file, { replaceUrl = false, updateUrl = true } = {}) {
     if (updateUrl && !isRestoringHistory) setUrlFilePath(file.path, { replace: replaceUrl });
 }
 
+function activateTreeFile(filePath) {
+    const item = [...treeRoot.querySelectorAll('[data-path]')].find(node => node.dataset.path === filePath);
+    if (item) setActiveTreeItem(item);
+}
+
+function scrollToLinkedLocation(file, hash) {
+    if (!hash) return;
+    window.requestAnimationFrame(() => {
+        if (file?.type === 'pdf') {
+            const page = Number(hash.match(/^page=(\d+)$/i)?.[1]);
+            const pageNode = page ? pdfWrapper.querySelector(`[data-page="${page}"]`) : null;
+            pageNode?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
+        const target = [...mdWrapper.querySelectorAll('[id]')].find(node => node.id === hash);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
+async function openRepositoryLink(link) {
+    if (!currentFile || currentFile.type !== 'md') return;
+    const href = link.getAttribute('href');
+    const { files } = await repositoryIndex.load();
+    const resolved = resolveRepositoryDocumentLink(href, currentFile.path, files);
+    if (!resolved) return;
+
+    if (resolved.sameDocument) {
+        scrollToLinkedLocation(currentFile, resolved.hash);
+        return;
+    }
+    if (!resolved.file) {
+        searchStatus.textContent = `リンク先が見つかりません: ${resolved.repositoryPath}`;
+        return;
+    }
+
+    activateTreeFile(resolved.file.path);
+    await openFile(resolved.file);
+    scrollToLinkedLocation(resolved.file, resolved.hash);
+}
+
 async function loadRepositoryIndex() {
     searchStatus.textContent = 'ファイル一覧を取得しています...';
     const index = await repositoryIndex.load();
@@ -439,6 +482,11 @@ async function runContentSearch(query) {
         searchStatus.textContent = '検索語を入力するとMarkdown本文を検索します';
         return;
     }
+    if (query.length < 2) {
+        clearSearchResults();
+        searchStatus.textContent = '通信量を抑えるため2文字以上で本文検索します';
+        return;
+    }
 
     searchStatus.textContent = 'GitHubで本文検索しています...';
     const rootPath = normalizeRootPath(settings);
@@ -472,7 +520,7 @@ function runSearch() {
             searchResults.classList.add('hidden');
             searchStatus.textContent = `検索できませんでした (${error.message})`;
         }
-    }, searchMode === 'content' ? 450 : 120);
+    }, searchMode === 'content' ? (isDesktopLayout() ? 600 : 900) : 120);
 }
 
 function setActiveTreeItem(item) {
@@ -521,6 +569,18 @@ clearSearchBtn.addEventListener('click', () => {
     currentFileSearch.clearMarkdownHighlights();
     runSearch();
     searchInput.focus();
+});
+mdWrapper.addEventListener('click', (event) => {
+    const link = event.target.closest('a[href]');
+    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const href = link.getAttribute('href') || '';
+    if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(href)) return;
+    const linkedPath = href.split(/[?#]/, 1)[0];
+    if (linkedPath && /\.[^/]+$/.test(linkedPath) && !/\.(?:md|pdf)$/i.test(linkedPath)) return;
+    event.preventDefault();
+    openRepositoryLink(link).catch(error => {
+        searchStatus.textContent = `リンクを開けませんでした (${error.message})`;
+    });
 });
 document.querySelectorAll('.search-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => setSearchMode(btn.dataset.searchMode));
@@ -779,7 +839,7 @@ async function updatePdfCacheHelp() {
     if (!pdfCacheHelp) return;
     const mobileNote = pdfBlobCache.getMaxBytes() === MOBILE_MAX_BYTES ? 'スマホ上限' : 'PC上限';
     if (!settings.cachePdfBlobs) {
-        pdfCacheHelp.textContent = 'OFF推奨。ONの場合、PCは最大100MB、スマホは最大40MBまで保存し、古いPDFから自動削除します。';
+        pdfCacheHelp.textContent = 'Markdownは自動保存します。PDFを繰り返し読む場合はONにすると通信量を抑えられます。スマホ上限は40MBです。';
         return;
     }
 
@@ -810,15 +870,32 @@ async function loadPdfBytes(fileSha, fileName, filePath, signal) {
     return bytes;
 }
 
+async function loadMarkdownText(fileSha, fileName, filePath, signal) {
+    const file = { sha: fileSha, name: fileName, path: filePath };
+    const cachedText = await markdownTextCache.get(settings, file);
+    if (cachedText !== null) return cachedText;
+
+    const data = await fetchBlob(settings, fileSha, { signal });
+    const text = decodeBase64UTF8(data.content);
+    markdownTextCache.put(settings, file, text).catch(() => {});
+    return text;
+}
+
 async function loadMarkdown(fileSha, fileName, filePath = fileName) {
     const loadingState = loadingController.start();
     resetViewerState(fileName, 'md');
     currentFile = { sha: fileSha, name: fileName, path: filePath, type: 'md' };
 
     try {
-        const data = await fetchBlob(settings, fileSha, { signal: loadingState.controller.signal });
-
-        const markdownText = decodeBase64UTF8(data.content);
+        const markdownText = await loadMarkdownText(fileSha, fileName, filePath, loadingState.controller.signal);
+        if (containsMathSyntax(markdownText)) {
+            try {
+                await ensureMathDependencies();
+                enableMathRendering(md);
+            } catch (error) {
+                console.warn('数式ライブラリを読み込めませんでした。', error);
+            }
+        }
         const rawHtml = md.render(markdownText);
 
         const cleanHtml = DOMPurify.sanitize(rawHtml, {
@@ -869,8 +946,9 @@ async function loadPdfContinuous(fileSha, fileName, filePath = fileName) {
     currentFile = { sha: fileSha, name: fileName, path: filePath, type: 'pdf' };
 
     try {
+        const pdfjs = await ensurePdfJs();
         const bytes = await loadPdfBytes(fileSha, fileName, filePath, loadingState.controller.signal);
-        const loadingTask = pdfjsLib.getDocument({ data: bytes });
+        const loadingTask = pdfjs.getDocument({ data: bytes });
         loadingState.pdfTask = loadingTask;
         pdfDoc = await loadingTask.promise;
         loadingState.pdfTask = null;

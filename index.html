@@ -62,13 +62,7 @@
         }
     </script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1.0.0/texmath.min.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -1007,6 +1001,16 @@
             background: var(--app-panel-raised);
         }
 
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .connection-icon {
+            display: none;
+        }
+
         #logout-btn,
         #new-repository-btn,
         #cancel-repository-btn {
@@ -1288,6 +1292,39 @@
         }
 
         @media (max-width: 640px) {
+            #workspace-view>header {
+                gap: 0.35rem;
+                padding-inline: 0.5rem;
+            }
+
+            #header-title {
+                max-width: 30vw !important;
+                font-size: 0.95rem;
+            }
+
+            .header-actions {
+                gap: 0.2rem;
+            }
+
+            #shortcuts-btn {
+                display: none;
+            }
+
+            .theme-select-wrap {
+                width: 2.25rem;
+                height: 2.25rem;
+                flex: 0 0 2.25rem;
+                justify-content: center;
+                border: 1px solid var(--app-border);
+                border-radius: 0.65rem;
+                background: var(--app-panel-raised);
+            }
+
+            .theme-select-wrap .material-symbols-outlined {
+                position: static;
+                font-size: 1.2rem;
+            }
+
             #login-view>div {
                 padding: 1.25rem;
             }
@@ -1302,9 +1339,30 @@
             }
 
             #theme-select {
-                width: 2.35rem;
-                padding-inline: 2.35rem 0;
-                color: transparent;
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                max-width: none;
+                padding: 0;
+                opacity: 0;
+            }
+
+            #logout-btn {
+                display: grid;
+                width: 2.25rem;
+                height: 2.25rem;
+                padding: 0;
+                place-items: center;
+            }
+
+            .connection-icon {
+                display: inline;
+                font-size: 1.15rem;
+            }
+
+            .connection-label {
+                display: none;
             }
         }
     </style>
@@ -1420,7 +1478,7 @@
                         </span>
                         <span id="pdf-cache-help"
                             class="mt-1 block text-xs leading-relaxed text-gray-500 dark:text-dracula-comment">
-                            OFF推奨。ONの場合、PCは最大100MB、スマホは最大40MBまで保存し、古いPDFから自動削除します。
+                            Markdownは自動保存します。PDFはONにすると、PC最大100MB・スマホ最大40MBで古いものから自動削除します。
                         </span>
                     </span>
                 </label>
@@ -1452,7 +1510,7 @@
                     id="header-title">Docs Viewer</h1>
             </div>
 
-            <div class="flex items-center space-x-2 sm:space-x-3">
+            <div class="header-actions">
                 <button id="focus-search-btn"
                     class="icon-btn text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-dracula-comment dark:hover:text-dracula-fg dark:hover:bg-dracula-current transition-colors"
                     title="検索">
@@ -1474,7 +1532,10 @@
                 </label>
 
                 <button id="logout-btn"
-                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 dark:bg-dracula-bg dark:hover:bg-dracula-current dark:text-dracula-comment dark:hover:text-dracula-fg py-1.5 px-3 rounded border border-gray-200 dark:border-dracula-current transition-colors">接続先</button>
+                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 dark:bg-dracula-bg dark:hover:bg-dracula-current dark:text-dracula-comment dark:hover:text-dracula-fg py-1.5 px-3 rounded border border-gray-200 dark:border-dracula-current transition-colors">
+                    <span class="material-symbols-outlined connection-icon" aria-hidden="true">dns</span>
+                    <span class="connection-label">接続先</span>
+                </button>
             </div>
         </header>
 

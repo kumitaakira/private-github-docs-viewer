@@ -1,3 +1,5 @@
+import { ensureMermaid } from '../core/dependencyLoader.js';
+
 const MERMAID_FONT = 'system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif';
 
 let renderSequence = 0;
@@ -180,9 +182,20 @@ async function renderDiagram(container, isDark, generation) {
  * @returns {Promise<void>}
  */
 export async function renderMermaidDiagrams(root) {
-    if (!root || !window.mermaid) return;
+    if (!root) return;
     const diagrams = [...root.querySelectorAll('[data-mermaid-diagram]')];
     if (diagrams.length === 0) return;
+
+    try {
+        await ensureMermaid();
+    } catch (error) {
+        diagrams.forEach(diagram => {
+            diagram.classList.add('has-error');
+            const status = diagram.querySelector('.mermaid-status');
+            if (status) status.textContent = 'Mermaidライブラリを読み込めませんでした。';
+        });
+        return;
+    }
 
     const generation = ++renderGeneration;
     const isDark = document.documentElement.classList.contains('dark');
