@@ -1027,7 +1027,21 @@
             box-shadow: 0 8px 22px color-mix(in srgb, var(--app-accent) 22%, transparent);
         }
 
+        #repository-list-panel,
+        #repository-list {
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        #repository-list {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
         #repository-list>div {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
             background: var(--app-panel-raised) !important;
             border-color: var(--app-border) !important;
             border-radius: 0.75rem !important;
@@ -1363,6 +1377,14 @@
 
             .connection-label {
                 display: none;
+            }
+
+            .repository-profile-actions {
+                gap: 0.125rem;
+            }
+
+            .repository-profile-badge {
+                padding-inline: 0.4rem;
             }
         }
     </style>

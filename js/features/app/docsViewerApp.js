@@ -176,15 +176,15 @@ function renderRepositoryProfiles() {
 
     profiles.forEach(profile => {
         const card = document.createElement('div');
-        card.className = 'rounded border border-gray-200 bg-white p-3 shadow-sm transition hover:border-blue-200 hover:shadow-md dark:border-dracula-current dark:bg-dracula-bg dark:hover:border-dracula-comment';
+        card.className = 'w-full min-w-0 max-w-full overflow-hidden rounded border border-gray-200 bg-white p-3 shadow-sm transition hover:border-blue-200 hover:shadow-md dark:border-dracula-current dark:bg-dracula-bg dark:hover:border-dracula-comment';
         card.dataset.profileId = profile.id;
 
         const top = document.createElement('div');
-        top.className = 'flex items-center justify-between gap-3';
+        top.className = 'flex w-full min-w-0 items-center justify-between gap-2 sm:gap-3';
 
         const text = document.createElement('button');
         text.type = 'button';
-        text.className = 'min-w-0 flex-1 text-left';
+        text.className = 'min-w-0 flex-1 overflow-hidden text-left';
         text.title = profile.name;
         text.addEventListener('click', () => openRepository(profile));
 
@@ -198,10 +198,10 @@ function renderRepositoryProfiles() {
         text.appendChild(path);
 
         const actions = document.createElement('div');
-        actions.className = 'flex shrink-0 items-center gap-1';
+        actions.className = 'repository-profile-actions flex shrink-0 items-center gap-1';
 
         const activeBadge = document.createElement('span');
-        activeBadge.className = 'inline-flex h-7 items-center rounded bg-blue-100 px-2 text-[11px] font-medium leading-none text-blue-700 dark:bg-dracula-current dark:text-dracula-cyan';
+        activeBadge.className = 'repository-profile-badge inline-flex h-7 items-center rounded bg-blue-100 px-2 text-[11px] font-medium leading-none text-blue-700 dark:bg-dracula-current dark:text-dracula-cyan';
         activeBadge.textContent = '前回';
         activeBadge.hidden = profile.id !== activeId;
 
@@ -534,6 +534,10 @@ function setActiveTreeItem(item) {
     activeTreeItem = item;
 }
 
+function findDirectReadme(files) {
+    return files.find(file => file.name.toLowerCase() === 'readme.md') || null;
+}
+
 async function openInitialFileIfAvailable() {
     const urlFilePath = getUrlFilePath();
     if (urlFilePath) {
@@ -546,15 +550,22 @@ async function openInitialFileIfAvailable() {
     }
 
     const lastFile = lastOpenedFileStore.get(settings);
-    if (!lastFile) return;
-
-    try {
-        const indexedLastFile = await findFileByPath(lastFile.path);
-        await openFile(indexedLastFile || lastFile, { replaceUrl: true });
-    } catch (error) {
-        lastOpenedFileStore.clear();
-        emptyState.classList.remove('hidden');
+    if (lastFile) {
+        try {
+            const indexedLastFile = await findFileByPath(lastFile.path);
+            await openFile(indexedLastFile || lastFile, { replaceUrl: true });
+            return;
+        } catch (error) {
+            lastOpenedFileStore.clear();
+        }
     }
+
+    const { files } = await repositoryIndex.load();
+    const rootPath = normalizeRootPath(settings);
+    const rootReadmePath = rootPath ? `${rootPath}/readme.md` : 'readme.md';
+    const rootReadme = files.find(file => file.path.toLowerCase() === rootReadmePath.toLowerCase());
+    if (rootReadme) await openFile(rootReadme, { replaceUrl: true });
+    else emptyState.classList.remove('hidden');
 }
 
 document.getElementById('menu-btn').addEventListener('click', () => toggleSidebar());
@@ -779,6 +790,16 @@ function renderTreeNode(node, lastOpenedFile, isRoot = false) {
         const childrenContainer = document.createElement('div');
         details.addEventListener('toggle', () => {
             folderIcon.textContent = details.open ? 'folder_open' : 'folder';
+            if (!details.open) return;
+
+            const readme = findDirectReadme(folder.files);
+            if (!readme || currentFile?.path === readme.path) return;
+            const readmeRow = [...childrenContainer.querySelectorAll('[data-path]')]
+                .find(row => row.dataset.path === readme.path);
+            if (readmeRow) setActiveTreeItem(readmeRow);
+            openFile(readme).catch(error => {
+                searchStatus.textContent = `READMEを開けませんでした (${error.message})`;
+            });
         });
         details.appendChild(summary);
         childrenContainer.appendChild(renderTreeNode(folder, lastOpenedFile));
