@@ -127,6 +127,12 @@ function initializeMermaid(isDark) {
     });
 }
 
+function normalizeMermaidSource(source) {
+    // Mermaid quoted labels do not accept backslash-escaped quotes, although
+    // they are common in Markdown examples containing source-code snippets.
+    return source.replace(/\\"/g, '&quot;');
+}
+
 function parseOpaqueColor(color) {
     if (!color || color === 'none' || color === 'transparent') return null;
     const match = color.match(/^rgba?\(\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)(?:\s*[,/]\s*(\d+(?:\.\d+)?))?\s*\)$/i);
@@ -143,6 +149,45 @@ function readableTextColor(background, fallback) {
     });
     const luminance = (0.2126 * linear[0]) + (0.7152 * linear[1]) + (0.0722 * linear[2]);
     return luminance > 0.36 ? '#18232d' : '#f7fafc';
+}
+
+function fitClusterLabels(stage) {
+    stage.querySelectorAll('g.cluster').forEach((cluster) => {
+        const rect = [...cluster.children].find(child => child.matches?.('rect'));
+        const labelGroup = cluster.querySelector(':scope > .cluster-label');
+        const foreignObject = labelGroup?.querySelector('foreignObject');
+        const content = foreignObject?.firstElementChild;
+        if (!rect || !labelGroup || !foreignObject || !content) return;
+
+        const rectX = Number(rect.getAttribute('x')) || 0;
+        const rectY = Number(rect.getAttribute('y')) || 0;
+        const rectWidth = Number(rect.getAttribute('width')) || 0;
+        const horizontalPadding = 12;
+        const availableWidth = Math.max(80, rectWidth - (horizontalPadding * 2));
+
+        labelGroup.setAttribute('transform', `translate(${rectX + horizontalPadding}, ${rectY})`);
+        foreignObject.setAttribute('width', String(availableWidth));
+        foreignObject.style.setProperty('overflow', 'visible');
+        content.style.setProperty('display', 'block');
+        content.style.setProperty('width', `${availableWidth}px`, 'important');
+        content.style.setProperty('max-width', 'none', 'important');
+        content.style.setProperty('white-space', 'nowrap', 'important');
+        content.style.setProperty('line-height', '1.25', 'important');
+        content.style.setProperty('font-size', '14px', 'important');
+
+        const naturalWidth = content.scrollWidth;
+        const fontSize = naturalWidth > availableWidth
+            ? Math.max(11, 14 * (availableWidth / naturalWidth))
+            : 14;
+        const labelHeight = Math.ceil(fontSize * 1.25) + 2;
+
+        content.style.setProperty('font-size', `${fontSize}px`, 'important');
+        content.querySelectorAll('*').forEach((element) => {
+            element.style.setProperty('font-size', 'inherit', 'important');
+            element.style.setProperty('line-height', 'inherit', 'important');
+        });
+        foreignObject.setAttribute('height', String(labelHeight));
+    });
 }
 
 function improveNodeTextContrast(stage, isDark) {
@@ -216,7 +261,8 @@ document.addEventListener('keydown', (event) => {
 });
 
 async function renderDiagram(container, isDark, generation) {
-    const source = container.querySelector('.mermaid-source code')?.textContent.trim() || '';
+    const rawSource = container.querySelector('.mermaid-source code')?.textContent.trim() || '';
+    const source = normalizeMermaidSource(rawSource);
     const stage = container.querySelector('.mermaid-stage');
     const status = container.querySelector('.mermaid-status');
     if (!source || !stage || !status) return;
@@ -231,6 +277,7 @@ async function renderDiagram(container, isDark, generation) {
         if (generation !== renderGeneration || !container.isConnected) return;
 
         stage.innerHTML = result.svg;
+        fitClusterLabels(stage);
         improveNodeTextContrast(stage, isDark);
         container.classList.add('is-rendered');
         const renderedSvg = stage.querySelector('svg')?.outerHTML || result.svg;
