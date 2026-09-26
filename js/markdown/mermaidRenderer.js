@@ -21,6 +21,10 @@ function themeVariables(isDark) {
             tertiaryBorderColor: '#33404e',
             lineColor: '#91a0af',
             textColor: '#e6edf3',
+            titleColor: '#e6edf3',
+            nodeTextColor: '#e6edf3',
+            classText: '#e6edf3',
+            labelColor: '#e6edf3',
             mainBkg: '#1b3032',
             nodeBorder: '#4fd1c5',
             clusterBkg: '#151a21',
@@ -39,7 +43,20 @@ function themeVariables(isDark) {
             noteBorderColor: '#f6e05e',
             noteTextColor: '#e6edf3',
             activationBkgColor: '#25213a',
-            activationBorderColor: '#a78bfa'
+            activationBorderColor: '#a78bfa',
+            taskTextColor: '#e6edf3',
+            taskTextOutsideColor: '#e6edf3',
+            activeTaskTextColor: '#0e1116',
+            doneTaskTextColor: '#e6edf3',
+            critTextColor: '#0e1116',
+            sectionBkgColor: '#1b3032',
+            sectionBkgColor2: '#25213a',
+            altSectionBkgColor: '#151a21',
+            gridColor: '#33404e',
+            pieTitleTextColor: '#e6edf3',
+            pieSectionTextColor: '#0e1116',
+            pieLegendTextColor: '#e6edf3',
+            stateLabelColor: '#e6edf3'
         };
     }
 
@@ -56,6 +73,10 @@ function themeVariables(isDark) {
         tertiaryBorderColor: '#d8cebd',
         lineColor: '#71685e',
         textColor: '#2b2a26',
+        titleColor: '#2b2a26',
+        nodeTextColor: '#2b2a26',
+        classText: '#2b2a26',
+        labelColor: '#2b2a26',
         mainBkg: '#fff3e4',
         nodeBorder: '#b45309',
         clusterBkg: '#fffdf8',
@@ -74,7 +95,20 @@ function themeVariables(isDark) {
         noteBorderColor: '#c18b1c',
         noteTextColor: '#3a3020',
         activationBkgColor: '#f2eafb',
-        activationBorderColor: '#7c3aed'
+        activationBorderColor: '#7c3aed',
+        taskTextColor: '#2b2a26',
+        taskTextOutsideColor: '#2b2a26',
+        activeTaskTextColor: '#2b2a26',
+        doneTaskTextColor: '#565149',
+        critTextColor: '#2b2a26',
+        sectionBkgColor: '#fff3e4',
+        sectionBkgColor2: '#f2eafb',
+        altSectionBkgColor: '#fffdf8',
+        gridColor: '#d8cebd',
+        pieTitleTextColor: '#2b2a26',
+        pieSectionTextColor: '#2b2a26',
+        pieLegendTextColor: '#2b2a26',
+        stateLabelColor: '#2b2a26'
     };
 }
 
