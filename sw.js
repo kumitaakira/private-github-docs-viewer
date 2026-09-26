@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'private-docs-static-v5';
+const STATIC_CACHE = 'private-docs-static-v6';
 const CACHEABLE_HOSTS = new Set([
     self.location.host,
     'cdn.tailwindcss.com',

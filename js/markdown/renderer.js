@@ -18,6 +18,51 @@ export function createMarkdownRenderer() {
         }
     });
 
+    // CommonMark can reject **「日本語」**が when a closing punctuation mark
+    // touches the delimiter and another Japanese character follows it. This
+    // narrow fallback runs only for that boundary (and whitespace before the
+    // closing delimiter); all other emphasis stays with Markdown-It's rule.
+    md.inline.ruler.before('emphasis', 'japanese_strong_boundary', (state, silent) => {
+        const start = state.pos;
+        if (state.src.slice(start, start + 2) !== '**') return false;
+        if (!state.src[start + 2] || /\s/.test(state.src[start + 2])) return false;
+
+        let end = start + 2;
+        while ((end = state.src.indexOf('**', end)) !== -1) {
+            if (end > start + 2 && state.src[end - 1] !== '\\') break;
+            end += 2;
+        }
+        if (end === -1) return false;
+
+        const rawContent = state.src.slice(start + 2, end);
+        if (rawContent.includes('\n')) return false;
+        const content = rawContent.replace(/[\t \u3000]+$/, '');
+        if (!content) return false;
+
+        const nextCharacter = state.src[end + 2] || '';
+        const hasTrailingWhitespace = content.length < rawContent.length;
+        const hasJapanesePunctuationBoundary = Boolean(nextCharacter)
+            && /\p{P}$/u.test(content)
+            && !/[\s\p{P}]/u.test(nextCharacter);
+        if (!hasTrailingWhitespace && !hasJapanesePunctuationBoundary) return false;
+
+        if (!silent) {
+            const open = state.push('strong_open', 'strong', 1);
+            open.markup = '**';
+            state.md.inline.parse(content, state.md, state.env, state.tokens);
+            const close = state.push('strong_close', 'strong', -1);
+            close.markup = '**';
+
+            if (content.length < rawContent.length) {
+                const whitespace = state.push('text', '', 0);
+                whitespace.content = rawContent.slice(content.length);
+            }
+        }
+
+        state.pos = end + 2;
+        return true;
+    });
+
     md.core.ruler.push('repository_heading_ids', (state) => {
         const slugCounts = new Map();
         state.tokens.forEach((token, index) => {

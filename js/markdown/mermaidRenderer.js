@@ -127,6 +127,50 @@ function initializeMermaid(isDark) {
     });
 }
 
+function parseOpaqueColor(color) {
+    if (!color || color === 'none' || color === 'transparent') return null;
+    const match = color.match(/^rgba?\(\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)(?:\s*[,/]\s*(\d+(?:\.\d+)?))?\s*\)$/i);
+    if (!match || (match[4] !== undefined && Number(match[4]) === 0)) return null;
+    return match.slice(1, 4).map(Number);
+}
+
+function readableTextColor(background, fallback) {
+    const rgb = parseOpaqueColor(background);
+    if (!rgb) return fallback;
+    const linear = rgb.map(channel => {
+        const value = channel / 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    const luminance = (0.2126 * linear[0]) + (0.7152 * linear[1]) + (0.0722 * linear[2]);
+    return luminance > 0.36 ? '#18232d' : '#f7fafc';
+}
+
+function improveNodeTextContrast(stage, isDark) {
+    const fallback = isDark ? '#e6edf3' : '#2b2a26';
+    const groups = stage.querySelectorAll([
+        'g.node',
+        'g.cluster',
+        'g.actor',
+        'g.entityBox',
+        'g[class*="stateGroup"]',
+        'g[class*="requirement"]'
+    ].join(','));
+
+    groups.forEach((group) => {
+        const shape = [...group.children].find(child => child.matches?.('rect, circle, ellipse, polygon, path'));
+        if (!shape) return;
+        const color = readableTextColor(getComputedStyle(shape).fill, fallback);
+
+        group.querySelectorAll('text, tspan').forEach((element) => {
+            element.style.setProperty('fill', color, 'important');
+        });
+        group.querySelectorAll('foreignObject, foreignObject *').forEach((element) => {
+            element.style.setProperty('color', color, 'important');
+            element.style.setProperty('-webkit-text-fill-color', color, 'important');
+        });
+    });
+}
+
 function cleanupTemporaryNodes(id) {
     [id, `d${id}`].forEach((candidateId) => {
         const candidate = document.getElementById(candidateId);
@@ -187,12 +231,14 @@ async function renderDiagram(container, isDark, generation) {
         if (generation !== renderGeneration || !container.isConnected) return;
 
         stage.innerHTML = result.svg;
+        improveNodeTextContrast(stage, isDark);
         container.classList.add('is-rendered');
-        stage.onclick = () => openMermaidLightbox(result.svg);
+        const renderedSvg = stage.querySelector('svg')?.outerHTML || result.svg;
+        stage.onclick = () => openMermaidLightbox(renderedSvg);
         stage.onkeydown = (event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
-            openMermaidLightbox(result.svg);
+            openMermaidLightbox(renderedSvg);
         };
         result.bindFunctions?.(stage);
     } catch (error) {
